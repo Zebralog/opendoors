@@ -1,0 +1,52 @@
+name = OpenDoors Standards
+description = Basic settings we need for every website.
+core = 7.x
+package = OpenDoors
+version = 7.x-0.1
+project = opendoors_standards
+dependencies[] = ctools
+dependencies[] = features
+dependencies[] = file
+dependencies[] = file_entity
+dependencies[] = i18n_field
+dependencies[] = i18n_node
+dependencies[] = image
+dependencies[] = strongarm
+dependencies[] = text
+dependencies[] = views
+features[ctools][] = strongarm:strongarm:1
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[field_base][] = field_image
+features[field_base][] = field_pane_embedded_downloads
+features[field_base][] = field_pane_embedded_id
+features[field_instance][] = node-pane_embedded-body
+features[field_instance][] = node-pane_embedded-field_image
+features[field_instance][] = node-pane_embedded-field_pane_embedded_downloads
+features[field_instance][] = node-pane_embedded-field_pane_embedded_id
+features[node][] = pane_embedded
+features[variable][] = comment_anonymous_pane_embedded
+features[variable][] = comment_default_mode_pane_embedded
+features[variable][] = comment_default_per_page_pane_embedded
+features[variable][] = comment_form_location_pane_embedded
+features[variable][] = comment_pane_embedded
+features[variable][] = comment_preview_pane_embedded
+features[variable][] = comment_subject_field_pane_embedded
+features[variable][] = i18n_node_extended_pane_embedded
+features[variable][] = i18n_node_options_pane_embedded
+features[variable][] = language_content_type_pane_embedded
+features[variable][] = menu_options_pane_embedded
+features[variable][] = menu_parent_pane_embedded
+features[variable][] = node_options_pane_embedded
+features[variable][] = node_preview_pane_embedded
+features[variable][] = node_submitted_pane_embedded
+features[views_view][] = show_content_by_id
+features_exclude[dependencies][opendoors_discussion] = opendoors_discussion
+
+
+; Information added by drush on 2014-11-06
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "opendoors"
+datestamp = "1415291275"
+

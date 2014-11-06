@@ -1,0 +1,80 @@
+#messages,
+#console {
+  margin: 0 !important;
+  padding: 0 !important;  
+}
+#messages-box {
+  left: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: fixed;
+  _position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+#messages div.messages {
+  -moz-animation: animate-bg 5s linear infinite;
+  -moz-background-size: 40px 40px;
+  -moz-box-shadow: inset 0 -1px 0 rgba(255,255,255,.4);
+  -webkit-animation: animate-bg 5s linear infinite;
+  -webkit-background-size: 40px 40px;
+  -webkit-box-shadow: inset 0 -1px 0 rgba(255,255,255,.4);
+  background-size: 40px 40px;
+  background-image: none;
+  background-image: -moz-linear-gradient(135deg, rgba(255, 255, 255, .05) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .05) 50%, rgba(255, 255, 255, .05) 75%, transparent 75%, transparent);
+  background-image: -ms-linear-gradient(135deg, rgba(255, 255, 255, .05) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .05) 50%, rgba(255, 255, 255, .05) 75%, transparent 75%, transparent);
+  background-image: -o-linear-gradient(135deg, rgba(255, 255, 255, .05) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .05) 50%, rgba(255, 255, 255, .05) 75%, transparent 75%, transparent);
+  background-image: -webkit-gradient(linear, left top, right bottom, color-stop(.25, rgba(255, 255, 255, .05)), color-stop(.25, transparent), color-stop(.5, transparent), color-stop(.5, rgba(255, 255, 255, .05)), color-stop(.75, rgba(255, 255, 255, .05)), color-stop(.75, transparent), to(transparent));
+  background-image: -webkit-linear-gradient(135deg, rgba(255, 255, 255, .05) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .05) 50%, rgba(255, 255, 255, .05) 75%, transparent 75%, transparent);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, .05) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .05) 50%, rgba(255, 255, 255, .05) 75%, transparent 75%, transparent);
+  background-repeat: repeat;
+  border: 1px solid;
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,.4);
+  color: #FFF;
+  margin: 0 !important;
+  padding: 0 !important;  
+  text-shadow: 0 1px 0 rgba(0,0,0,.5);
+  width: 100%;
+}
+#messages div.messages .context {
+  padding: 10px 20px;
+}
+div.message p {
+  margin: 0;
+}
+
+div.error {
+  background-color: #DE4343;
+  border-color: #C43D3D;
+}
+div.info {
+  background-color: #4EA5CD;
+  border-color: #3B8EB5;
+}
+div.status {
+  background-color: #61B832;
+  border-color: #55A12C;
+}
+div.warning {
+  background-color: #EAAF51;
+  border-color: #D99A36;
+}
+
+@-moz-keyframes animate-bg {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: -80px 0;
+  }
+}
+@-webkit-keyframes animate-bg {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: -80px 0;
+  }
+}

@@ -1,0 +1,28 @@
+<?php
+
+/**
+ * @file
+ *
+ * Module adds a Wywisyg API plugin that converts p and br tags to linebreaks,
+ * and vice-versa.
+ */
+
+/**
+ * Implements hook_wysiwyg_include_directory().
+ */
+function wysiwyg_linebreaks_wysiwyg_include_directory($type) {
+  switch ($type) {
+    case 'plugins':
+      return $type;
+  }
+}
+
+/**
+ * Implements hook_init().
+ */
+function wysiwyg_linebreaks_init() {
+  // Add CSS to hide toolbar buttons
+  // @todo - don't load this on every page - only pages where WYSIWYG textfields
+  // might appear. (hook_init() might not be our best option).
+  drupal_add_css(drupal_get_path('module', 'wysiwyg_linebreaks') .'/wysiwyg_linebreaks.css');
+}

@@ -1,0 +1,83 @@
+<?php
+
+
+/**
+ * @file
+ *
+ * The main registration_role.module file
+ *
+ * Designate a role to assign to all new user accounts
+ * that are created through the registration form.
+ * 
+ * Based on a code snippet by Pauly Jura:
+ * http://drupal.org/node/28379#comment-132430
+ */
+
+
+/**
+ * Implements hook_help().
+ */
+function registration_role_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case "admin/help#registration_role":
+      $output = t("Auto-assign a role upon registration.");
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function registration_role_menu() {
+  $items = array();
+
+  $items['admin/config/people/registration_role'] = array(
+    'title' => 'Registration role',
+    'description' => 'Auto-assign a role upon registration.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('registration_role_admin_settings'),
+    'access arguments' => array('administer users'),
+  );
+
+  return $items;
+}
+
+/**
+ * Form builder; The settings form for Registration Role.
+ *
+ * @ingroup forms
+ * @see system_settings_form()
+ */
+function registration_role_admin_settings() {
+  $roles = user_roles(TRUE);
+  unset($roles['2']);
+  $form['registration_role_roles'] = array(
+    '#type' => 'radios',
+    '#title' => t('Role to automatically assign to new registrants'),
+    '#options' => $roles,
+    '#default_value' => variable_get('registration_role_roles', ''),
+    '#description' => t('The selected role will be assigned to users who register using the user-registration form. Be sure this role does not have any privileges you fear giving out without reviewing who receives it.'),
+  );
+  return system_settings_form($form);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function registration_role_form_user_register_form_alter(&$form, $form_state) {
+  // Insert our handler BEFORE user_register_submit().
+  // This allows us to add the role before the new user is saved.
+  array_unshift($form['#submit'], 'registration_role_form_user_register_submit');
+}
+
+/**
+ * Submit handler for the user registration form.
+ */
+function registration_role_form_user_register_submit(&$form, &$form_state) {
+  if ($rid = variable_get('registration_role_roles', '')) {
+    $roles = user_roles(TRUE);
+    $form_state['values']['roles'][$rid] = $roles[$rid];
+  }
+}

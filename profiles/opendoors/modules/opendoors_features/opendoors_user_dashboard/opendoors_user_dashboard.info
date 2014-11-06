@@ -1,0 +1,25 @@
+name = Opendoors User Dashboard
+description = User profile page that displays my activity.
+core = 7.x
+package = Opendoors
+version = 7.x-1.1
+project = opendoors_user_dashboard
+dependencies[] = ctools
+dependencies[] = page_manager
+dependencies[] = views
+dependencies[] = views_content
+features[ctools][] = page_manager:pages_default:1
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[page_manager_pages][] = user_dashboard
+features[views_view][] = unread_nodes
+features[views_view][] = user_comments
+features[views_view][] = user_nodes
+
+
+; Information added by drush on 2014-11-06
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "opendoors"
+datestamp = "1415291275"
+

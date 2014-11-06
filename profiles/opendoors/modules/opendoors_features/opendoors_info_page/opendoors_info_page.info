@@ -1,0 +1,52 @@
+name = Opendoors info page
+description = The info page provides background information about the discussion topic.
+core = 7.x
+package = Opendoors
+version = 7.x-1.x-dev
+project = opendoors
+dependencies[] = opendoors_discussion
+dependencies[] = text
+dependencies[] = views
+datestamp = 1410273466
+features[ctools][] = page_manager:pages_default:1
+features[ctools][] = strongarm:strongarm:1
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[field_base][] = field_info_article_download
+features[field_base][] = field_info_article_image
+features[field_base][] = field_info_title_icon
+features[field_instance][] = node-info_article-body
+features[field_instance][] = node-info_article-field_info_article_download
+features[field_instance][] = node-info_article-field_info_article_image
+features[field_instance][] = node-info_article-field_info_title_icon
+features[node][] = info_article
+features[page_manager_pages][] = info_page
+features[variable][] = comment_anonymous_info_article
+features[variable][] = comment_default_mode_info_article
+features[variable][] = comment_default_per_page_info_article
+features[variable][] = comment_form_location_info_article
+features[variable][] = comment_info_article
+features[variable][] = comment_preview_info_article
+features[variable][] = comment_subject_field_info_article
+features[variable][] = field_bundle_settings_node__info_article
+features[variable][] = language_content_type_info_article
+features[variable][] = menu_options_info_article
+features[variable][] = menu_parent_info_article
+features[variable][] = node_options_info_article
+features[variable][] = node_preview_info_article
+features[variable][] = node_submitted_info_article
+features[views_view][] = info_articles
+features_exclude[dependencies][ctools] = ctools
+features_exclude[dependencies][features] = features
+features_exclude[dependencies][file] = file
+features_exclude[dependencies][image] = image
+features_exclude[dependencies][page_manager] = page_manager
+features_exclude[dependencies][strongarm] = strongarm
+
+
+; Information added by drush on 2014-11-06
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "opendoors"
+datestamp = "1415291275"
+

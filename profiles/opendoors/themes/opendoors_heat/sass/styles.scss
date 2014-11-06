@@ -1,0 +1,683 @@
+/**
+ * @file
+ * Styles are organized using the SMACSS technique. @see http://smacss.com/book/
+ *
+ * When you turn on CSS aggregation at admin/config/development/performance, all
+ * of these @include files will be combined into a single file.
+ */
+
+/* Import Sass mixins, variables, Compass modules, etc. */
+@import "init";
+
+/* HTML element (SMACSS base) rules */
+@import "normalize";
+
+/* Layout rules */
+@import "layouts/responsive";
+
+/* Component (SMACSS module) rules */
+@import "components/misc";
+// Optionally, add your own components here.
+@import "print";
+
+/* SMACSS theme rules */
+/* @import "theme-A"; */
+/* @import "theme-B"; */
+
+
+
+//
+// Import webfonts
+//
+//'Open Sans'
+@import url('http://fonts.googleapis.com/css?family=Open+Sans');
+//'Fjord One'
+@import url('http://fonts.googleapis.com/css?family=Fjord+One');
+//'FontAwesome'
+@import url('http://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css');
+
+
+//
+// Initial settings
+//
+*, *:before, *:after {
+	-moz-box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+span {
+	display: inline-block;
+}
+
+// configure Zen Grids
+$zen-column-count:  12;
+$zen-gutter-width:  30px;
+@import "zen-grid-settings";
+
+
+
+//
+// Body
+//
+body {
+	// background: $gray-background; // Set through custom theme variables via theme-settings.php + opendoors_heat.info
+	font-family: "Fjord One";
+}
+//
+// Regular pages
+//
+body.page-delayed-ownership-feedback div#main,
+body.node-type-page div#main {
+	@include zen-grid-item-base();
+}
+
+//
+// Header
+//
+header#header {
+	position: relative;
+	margin-right:  $zen-gutter-width;
+	margin-left:  $zen-gutter-width;
+	padding: 0;
+	min-height: 200px;
+
+
+	@media all and (max-width: 1000px) {
+		img.header__logo-image {
+			 max-width: 270px;
+		}
+	}
+	@media all and (max-width: 640px) {
+		min-height: 230px;
+	}
+	@media all and (max-width: 480px) {
+		min-height: 260px;
+	}
+
+	// The configurable header background image is set in html.tpl.php
+//	background: url(../images/header_bg-tile.png);
+
+	//
+	// Logo
+	//
+	a#logo {
+		position: absolute;
+		z-index: 20;
+		left: 0;
+		top: 15px;
+	}
+	@media all and (max-width: 900px) {
+		a#logo {
+//			top: 45px;
+		}
+	}
+
+
+	//
+	// Icon for toggling nav
+	//
+	span#toggle-nav {
+		display: none; // The toggling item is invisible by default. When the screen is small, the icon is shown and the navi is hidden.
+
+	}
+
+	//
+	// Meta nav
+	//
+	nav#secondary-menu {
+
+		position: relative;
+		z-index: 21; // one above a#logo
+
+		padding-top: 15px;
+
+		margin-left: 370px;
+		@media all and (max-width: 990px){
+			margin-left: 300px;
+		}
+
+		//
+		// Links "Impressum", "Datenschutz", "Regeln"
+		//
+		ul.menu, ul.links {
+			display: block;
+			//position: absolute;
+			//top: 15px;
+			//right: 15px;
+			float: right;
+			padding: 0;
+			margin: 0;
+
+			li {
+				padding: 0;
+				margin: 0;
+				float: left;
+				list-style-type: none;
+
+				a {
+					display: inline-block;
+					padding: 2px 10px 4px;
+					color: #000000;
+					text-decoration: none;
+					background: #b2b2b2;
+					opacity: 0.8;
+					@include single-transition( all, 0.3s );
+
+					&:focus, &:hover {
+						background: lighten(#b2b2b2, 20%);
+						opacity: 1;
+						@include single-transition( all, 0.3s );
+					}
+				}
+			}
+			li.first a {
+				@include border-top-left-radius(10px);
+				@include border-bottom-left-radius(10px);
+				padding-left: 15px;
+			}
+			li.last a {
+				@include border-top-right-radius(10px);
+				@include border-bottom-right-radius(10px);
+				padding-right: 15px;
+			}
+
+		}
+		//
+		// Links "Einloggen", "Erstmalig anmelden"
+		//
+		div.region-secondary-navigation {
+			float: right;
+
+		}
+		ul.menu {
+			li a {
+				background: $highlight;
+				color: white;
+				&:hover, &:focus {
+					opacity: 1;
+//					background: $highlight-dark;
+					background: darken($highlight, 10%);
+				}
+			}
+
+		}
+	}
+}
+
+//
+// Nav toggler. Visible when width lower ...
+//
+@media all and (max-width: 840px) {
+	header#header {
+
+		min-height: 150px;
+
+		//
+		// Icon for toggling nav
+		//
+		span#toggle-nav {
+			z-index: 30;
+			display: block;
+			position: absolute;
+			right: 0px;
+			top: 15px;
+			float: right;
+			padding: 10px;
+			font-family: FontAwesome;
+			color: $white-font;
+			background-color: $highlight;
+			@include border-radius(10px);
+			width: 40px;
+			text-align: center;
+			cursor: pointer;
+			opacity: 0.8;
+
+			&:hover, &:focus {
+				opacity: 1;
+			}
+		}
+
+		nav#secondary-menu {
+//			background: $gray-background;
+			//
+			// Show hide menu
+			//
+//			opacity: 0;
+			max-height: 0px;
+			overflow: hidden;
+			@include single-transition( all, 0.3s );
+			&.expanded {
+				display: block;
+//				opacity: 1;
+				max-height: 1000px;
+				@include single-transition( all, 1s );
+			}
+
+			width: 100% !important;
+			//
+			// login nav
+			//
+			div.region-secondary-navigation {
+				@extend .clearfix;
+				float: none;
+				div.block {
+					margin-bottom: 0;
+					ul.menu {
+						width: 100% !important;
+						display: block;
+						float: none;
+						li {
+							float: none;
+							a {
+								display: block;
+								@include border-radius(10px);
+								padding: 10px;
+								opacity: 0.95;
+							}
+						}
+					}
+				}
+			}
+			//
+			// meta nav
+			//
+			ul.links {
+				width: 100% !important;
+				display: block;
+				float: none;
+				li {
+					float: none;
+					a {
+						display: block;
+						@include border-radius(10px);
+						padding: 10px;
+						opacity: 0.95;
+					}
+				}
+			}
+		}
+	}
+}
+@media all and (max-width: 370px) {
+	header#header {
+		min-height: 150px;
+		img {
+			width: 210px;
+		}
+
+	}
+}
+
+
+
+//
+// Pages Generals ###################################################################################################
+//
+
+//
+// Links
+//
+a, a:visited {
+	color: $highlight;
+	outline: none; // removes the dotted line when clicked
+}
+a:hover, a:focus, a:active {
+	text-decoration: underline;
+	outline: none; // removes the dotted line when clicked
+}
+
+// overrides for message boxes
+@import "message-boxes";
+
+input.form-text {
+}
+
+//
+// Fieldsets
+//
+fieldset {
+	margin-top: 30px;
+	@include box();
+
+	legend {
+		font-size: px2em(20px);
+	}
+}
+
+//
+// Re-position overlay tabs
+//
+#overlay-tabs {
+	margin-top: -44px;
+	left: 15px;
+	text-transform: none;
+}
+
+
+//
+// Override module settings
+//
+#overlay {
+	min-width: 200px;
+
+	div#navigation {
+		display: none;
+	}
+	#main {
+		padding-top: 0;
+	}
+
+
+	li {
+		&:hover a, &:focus a {
+		}
+		a {
+			background-color: $white-font;
+			color: $black-font;
+			font-size: px2em(16px);
+			&:hover, &:focus {
+				font-size: px2em(16px);
+			}
+		}
+	}
+}
+#overlay-tabs li a,
+#overlay-tabs li a:active,
+#overlay-tabs li a:visited,
+#overlay-tabs li a:hover {
+}
+
+#overlay-tabs li.active a,
+#overlay-tabs li.active a.active,
+#overlay-tabs li.active a:active,
+#overlay-tabs li.active a:visited {
+}
+
+div#overlay-content {
+
+	div#page {
+		div#content {
+//			display: none;
+//			max-width: 300px;
+//			width: 100%;
+
+			form#user-profile-form {
+//				display: none;
+				div#edit-account {
+
+					div.form-item-name {
+						input.form-text { width: 70%; }
+					}
+
+					div.form-item-mail {
+						input.form-text { width: 70%; }
+					}
+
+				}
+
+				fieldset#edit-l10n-client {
+//					display: none;
+
+				}
+
+				div#edit-actions {
+//					display: none;
+
+				}
+			}
+
+
+			.confirm-parent, .password-parent {
+				width: auto;
+				div.password-strength {
+					float: none;
+					width: auto;
+				}
+
+			}
+
+			div.password-suggestions {
+				width: auto;
+			}
+
+		}
+	}
+}
+
+// overrides for really small screens
+@media all and (max-width: 400px){
+	div#overlay-titlebar {
+		padding-left: 0 !important;
+		padding-right: 0 !important;
+		ul#overlay-tabs {
+			position: relative;
+			top: 20px;
+			margin-bottom: 25px;
+			padding-left: 0;
+
+		}
+	}
+	div#overlay-content {
+		padding-left: 0;
+		padding-right: 0;
+		div#main {
+			padding-right: 0;
+			padding-left: 0;
+		}
+		div#content {
+			padding-right: 0;
+			padding-left: 0;
+		}
+	}
+}
+
+
+//
+// Pages Specials ###################################################################################################
+//
+
+//
+// Regular pages, Two cols, if screen at least 960px wide !!!
+//
+body.node-type-page div#main {
+	@include zen-grid-item-base();
+
+	div#content article {
+		@media all and (min-width: 960px) {
+			@include multi-col( 2 );
+		}
+	}
+}
+
+//
+// Page Newsletter
+//
+body.page-newsletter div#main {
+	@include zen-grid-item-base();
+
+	input#edit-unsubscribe,
+	input#edit-subscribe {
+		@include button-submit-normal( $highlight, white, white, $gray-dark );
+		margin-right: 15px;
+		font-size: px2em(20px);
+	}
+}
+
+//
+// Login, Register, ...
+//
+body.page-user div#main {
+	//@include zen-grid-item-base();
+	@include zen-grid-item(12,1);
+	//
+	// Button
+	//
+	input.form-submit {
+		@include button-submit-normal( $highlight, $gray-background, white, $gray-dark );
+	}
+}
+//
+// User dashboard
+//
+body.page-user-dashboard {
+
+
+	div.pane-user-nodes-panel-pane-1,
+	div.pane-user-comments-panel-pane-1,
+	div.pane-user-nodes-panel-pane-2,
+	div.pane-opendoors-user-dashboard-settings-links {
+		margin-bottom: $vertical-margin;
+	}
+	a {
+		text-decoration: none;
+		display: block;
+		&:hover, &:focus {
+			text-decoration: underline;
+		}
+	}
+
+	//
+	div.views-row {
+		@include box(white);
+		padding-left: 0;
+		padding-right: 0;
+		margin-bottom: 15px;
+
+		// title
+		div.views-field-title,
+		div.views-field-subject {
+			a {
+				font-size: px2em(22px);
+			}
+		}
+
+	}
+
+
+	// user proposals
+	div.pane-user-nodes-panel-pane-1 {
+		@include zen-clear();
+		@include zen-grid-item(4,1);
+		@media all and (max-width: 1023px) {
+			@include zen-clear();
+			@include zen-grid-item(12,1);
+		}
+	}
+	// user comments
+	div.pane-user-comments-panel-pane-1 {
+		@include zen-grid-item(4,5);
+		@media all and (max-width: 1023px) {
+			@include zen-clear();
+			@include zen-grid-item(12,1);
+		}
+
+		span.views-field-title {
+			display: block;
+			margin-top: 5px;
+			a {
+			}
+		}
+
+	}
+	// users votes
+	div.pane-user-nodes-panel-pane-2 {
+		@include zen-grid-item(4,9);
+		@media all and (max-width: 1023px) {
+			@include zen-clear();
+			@include zen-grid-item(12,1);
+		}
+
+	}
+	// account settings
+	div.pane-opendoors-user-dashboard-settings-links {
+		@include zen-clear();
+		@include zen-grid-item(12,1);
+
+		li {
+			margin-left: 0;
+			list-style-type: none;
+			a {
+				&:before {
+					content: " ";
+					font-family: "FontAwesome";
+				}
+			}
+		}
+
+	}
+
+}
+// Page user edit
+body.page-user-edit {
+	h1#page-title {
+		margin-bottom: $vertical-margin;
+	}
+}
+
+
+// Overrides for user pages
+@media all and (max-width: 768px) {
+
+
+
+	ul#overlay-tabs {
+		position: relative;
+		margin-top: 0;
+		right: auto;
+		left: 0;
+
+		@extend .clearfix;
+		margin-bottom: 15px;
+
+		li {
+			display: block;
+//			float: left;
+			margin: -3px 10px 8px 0;
+		}
+	}
+
+	#overlay-tabs li a,
+	#overlay-tabs li a:active,
+	#overlay-tabs li a:visited,
+	#overlay-tabs li a:hover {
+		@include border-radius(10px);
+	}
+
+	#overlay-tabs li.active a,
+	#overlay-tabs li.active a.active,
+	#overlay-tabs li.active a:active,
+	#overlay-tabs li.active a:visited {
+		@include border-radius(10px);
+		background-color: $gray-background;
+	}
+
+
+
+	form#user-register-form,
+	form#user-pass,
+	form#user-login {
+		div.form-item {
+			input {
+				width: 100%;
+			}
+		}
+
+	}
+}
+
+
+
+//
+// Frontpage styles
+//
+@import "pages/frontpage";
+//
+// Node type "proposal" styles
+//
+@import "node--proposal";
+//
+// Page delayed ownership
+//
+@import 'pages/page-delayed-ownership-feedback';
+

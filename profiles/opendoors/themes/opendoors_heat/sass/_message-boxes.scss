@@ -1,0 +1,159 @@
+//
+// when admin menu is visible, push down the message boxes by 30px
+//
+body.admin-menu div#messages-box {
+	top: 30px !important;
+}
+body.admin-menu iframe.overlay-element {
+	top: 25px !important;
+}
+
+
+div#messages-box {
+	left: 0;
+	margin: 0 !important;
+	padding: 10px !important;
+	position: fixed;
+	top: 0;
+	width: 100%;
+	z-index: 998; // one below admin-menu
+
+
+
+	//
+	// ALL message types (status, warning, error)
+	//
+	div.messages {
+		position: relative;
+		@include border-radius(10px);
+		margin: 0;
+		padding: 20px 20px 20px;
+		border: none;
+		background-image: none;
+//		text-align: center;
+		cursor: pointer;
+
+		// icon (different for STATUS, WARNING and ERROR)
+		&:before {
+			font-family: "FontAwesome";
+			font-size: px2em(30px);
+			left: 20px;
+			top: 20px;
+			position: absolute;
+			color: $white-font;
+		}
+
+		//
+		// actual content
+		//
+		div.context {
+//			max-width: 770px;
+			//			max-width: 570px;
+			margin: 0 auto;
+			padding-left: 50px;
+			padding-right: 50px;
+			font-size: px2em(20px);
+			line-height: 30px;
+			color: white;
+
+
+			// lists, if there are ones
+			ul {
+				li {
+					margin-bottom: 30px;
+				}
+			}
+
+			// links
+			a {
+				background: $gray-dark;
+				color: $white-font;
+				@include border-radius(8px);
+				text-decoration: none;
+				padding: 0 10px;
+				white-space: nowrap;
+				&:before{
+					content: " ";
+					font-family: "FontAwesome";
+					font-size: px2em(14px);
+				}
+				&:hover, &:focus {
+					background: black;
+				}
+			}
+
+		}
+		//
+		// close button
+		//
+		&:after {
+			content: "";
+			font-family: "FontAwesome";
+			position: absolute;
+			right: 5px;
+			top: 3px;
+			color: white;
+			font-size: px2em(20px);
+			opacity: 0.5;
+
+		}
+
+	}
+
+
+	//
+	// Override for STATUS
+	//
+	div.status {
+//		background-color: $message-green;
+		background-color: $message-gray;
+
+		// icon
+		&:before {
+			content: " ";
+		}
+		div.context {
+
+			a {
+//				background-color: $highlight;
+				background-color: $gray-dark-lighter;
+				&:hover, &:focus {
+					background-color: $highlight-dark;
+				}
+			}
+
+		}
+	}
+
+	//
+	// Override for WARNING
+	//
+	div.warning {
+		background-color: $message-orange;
+		// icon
+		div.context {
+			&:before {
+				content: " ";
+				font-family: "FontAwesome";
+			}
+		}
+	}
+
+	//
+	// Override for ERROR
+	//
+	div.error {
+		background-color: $message-red;
+		// icon
+		&:before {
+			content: " ";
+		}
+		div.context {
+		}
+	}
+
+
+
+
+
+}

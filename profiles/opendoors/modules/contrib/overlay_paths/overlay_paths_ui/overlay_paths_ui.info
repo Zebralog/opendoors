@@ -1,0 +1,12 @@
+name = "Overlay paths UI"
+description = "Provides a UI for overlay paths, allow site builders to select paths that should appear in the overlay."
+core = 7.x
+dependencies[] = "overlay_paths"
+configure = "admin/config/system/overlay_paths_ui"
+
+; Information added by Drupal.org packaging script on 2014-01-02
+version = "7.x-1.3"
+core = "7.x"
+project = "overlay_paths"
+datestamp = "1388699909"
+

@@ -1,0 +1,48 @@
+name = OpenDoors Slideshow
+description = A flex slider displays an introduction or a slideshow of nodes of type slide.
+core = 7.x
+package = OpenDoors
+version = 7.x-0.6
+project = opendoors_slideshow
+dependencies[] = ctools
+dependencies[] = features
+dependencies[] = flexslider
+dependencies[] = flexslider_views
+dependencies[] = image
+dependencies[] = node
+dependencies[] = opendoors_discussion
+dependencies[] = strongarm
+dependencies[] = text
+dependencies[] = views
+features[ctools][] = flexslider:flexslider_default_preset:1
+features[ctools][] = strongarm:strongarm:1
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[field_base][] = field_slide_teaser_image
+features[field_instance][] = node-slide-body
+features[field_instance][] = node-slide-field_slide_teaser_image
+features[flexslider_optionset][] = frontpage_slider
+features[node][] = slide
+features[variable][] = comment_anonymous_slide
+features[variable][] = comment_default_mode_slide
+features[variable][] = comment_default_per_page_slide
+features[variable][] = comment_form_location_slide
+features[variable][] = comment_preview_slide
+features[variable][] = comment_slide
+features[variable][] = comment_subject_field_slide
+features[variable][] = field_bundle_settings_node__slide
+features[variable][] = language_content_type_slide
+features[variable][] = menu_options_slide
+features[variable][] = menu_parent_slide
+features[variable][] = node_options_slide
+features[variable][] = node_preview_slide
+features[variable][] = node_submitted_slide
+features[views_view][] = frontpage_slider
+
+
+; Information added by drush on 2014-11-06
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "opendoors"
+datestamp = "1415291275"
+

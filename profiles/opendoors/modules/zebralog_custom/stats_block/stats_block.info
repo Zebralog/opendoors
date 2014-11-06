@@ -1,0 +1,14 @@
+; $Id $
+name = Statistics block
+description = "Statistics on users' activities are calculated from Piwik and from Drupal's database on cron run and will be displayed in a block."
+package = "Zebra Custom"
+core = 7.x
+version = "7.x-0.5"
+
+
+; Information added by drush on 2014-11-06
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "opendoors"
+datestamp = "1415291275"
+

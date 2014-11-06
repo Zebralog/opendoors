@@ -1,0 +1,14 @@
+@charset "UTF-8";
+div#edit-field-category { clear: both; text-align: center; padding: 30px; }
+div#edit-field-category label[for="edit-field-category-und"] { display: none; }
+div#edit-field-category div#edit-field-category-und { min-height: 50px; margin: 10px auto; padding: 13px 15px 10px; display: inline-block; border: 1px solid white; }
+div#edit-field-category div.form-type-radios > div.description { font-size: 1em; opacity: 0.5; }
+div#edit-field-category div.form-type-radio { position: relative; display: inline-block; }
+div#edit-field-category div.form-type-radio input.form-radio { display: none; }
+div#edit-field-category div.form-type-radio label { padding-left: 17px; margin-left: 10px; margin-right: 10px; cursor: pointer; opacity: 0.6; }
+div#edit-field-category div.form-type-radio label:hover, div#edit-field-category div.form-type-radio label:focus { opacity: 1; }
+div#edit-field-category div.form-type-radio input:checked + label { position: relative; opacity: 1; }
+div#edit-field-category div.form-type-radio input:checked + label:before { content: " "; position: absolute; left: 0; top: -1px; font-family: "FontAwesome"; }
+div#edit-field-category div.form-type-radio div.description { display: none; position: absolute; z-index: 51; left: -70%; bottom: 35px; min-height: 40px; width: 300px; background: #cccccc; padding: 15px 15px 5px; -webkit-border-radius: 10px; -moz-border-radius: 10px; border-radius: 10px; font-size: 1em !important; }
+div#edit-field-category div.form-type-radio div.description:after { content: ''; position: absolute; border-style: solid; border-width: 15px 15px 0; border-color: #cccccc transparent; display: block; width: 0; z-index: 1; bottom: -15px; left: 135px; }
+div#edit-field-category div.form-type-radio:hover div.description, div#edit-field-category div.form-type-radio:focus div.description { display: block; }

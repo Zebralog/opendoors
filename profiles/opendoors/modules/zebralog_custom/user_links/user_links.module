@@ -1,0 +1,103 @@
+<?php
+
+/**
+ * Implements hook_block_info()
+ *
+ * Provides a block with links for guest and logged in users:
+ * - register | login
+ * - Profile / dashboard | logout
+ *
+ * @return array
+ */
+function user_links_block_info () {
+
+  $blocks['user_links'] = array(
+    'info' => t('User links'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+
+/**
+ * Implements hook_block_view()
+ *
+ * @return array
+ */
+function user_links_block_view($delta = 'user_links') {
+
+  switch($delta) {
+    case 'user_links':
+      global $user;
+      if ($user->uid == 0){
+        // Anonymous users
+        $current_path = $_GET['q'];
+        if ($current_path == 'user/register') {
+          $current_path = 'diskussion';
+        }
+        $items[] = l(t('Login'), 'user', array('query' => array('destination' => $current_path)));
+        $items[] = l(t('Register'), 'user/register');
+      }
+      else {
+        // Logged-in users
+        $items = array();
+        $max_name_length = (int)variable_get('user_links_max_name_length', 0);
+        if ($max_name_length > 0) {
+          $name = truncate_utf8($user->name, $max_name_length, $wordsafe = true, $add_ellipsis = false, 2);
+        }
+        else {
+          $name = $user->name;
+        }
+        if (module_exists('opendoors_user_dashboard') || module_exists('zebra_dashboard')) {
+          // zebra user dashboard feature is active, so link to the dashboard page
+          $items[] = l(t('My profile', array('@user' => $name)), 'user/' . $user->uid . '/dashboard');
+        }
+        else {
+          $items[] = l(t('My profile', array('@user' => $name)), 'user');
+        }
+        $items[] = l(t('Logout'), 'user/logout');
+      }
+
+      $variables = array(
+        'items' => $items,
+        'attributes' => array('class' => 'menu'),
+      );
+
+      $block['content'] = theme('item_list', $variables);
+      break;
+  }
+
+  return $block;
+}
+
+
+function user_links_block_configure ($delta) {
+
+  $form = array();
+
+  switch($delta) {
+    case 'user_links':
+      $form['user_links_max_name_length'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Maximum number of characters in a username'),
+        '#size' => 3,
+        '#description' => t('Name in "Hello username" will be shortened, if it is longer than this value. Leave empty for no restriction.'),
+        '#default_value' => variable_get('user_links_max_name_length', ''),
+      );
+    break;
+  }
+
+  return $form;
+}
+
+function user_links_block_save ($delta = '', $edit = array()) {
+
+  switch($delta) {
+    case 'user_links':
+      variable_set('user_links_max_name_length', (int) $edit['user_links_max_name_length']);
+    break;
+  }
+
+  return;
+}
+

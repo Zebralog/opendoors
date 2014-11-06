@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the od_discussion_export feature.
+ */
+
+include_once 'od_discussion_export.features.inc';

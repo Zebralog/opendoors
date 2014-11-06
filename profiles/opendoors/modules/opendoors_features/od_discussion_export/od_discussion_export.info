@@ -1,0 +1,20 @@
+name = Opendoors discussion export
+description = Export proposals (nodes) and comments created by participants. Also includes an export of user demographics.
+core = 7.x
+package = Opendoors
+dependencies[] = views
+dependencies[] = views_data_export
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[views_view][] = export_evaluation_comments
+features[views_view][] = export_evaluation_proposals
+features[views_view][] = export_evaluation_user_demographics
+features_exclude[dependencies][ctools] = ctools
+
+
+; Information added by drush on 2014-11-06
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "opendoors"
+datestamp = "1415291275"
+

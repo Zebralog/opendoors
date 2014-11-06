@@ -1,0 +1,35 @@
+body.page-delayed-ownership-feedback {
+
+
+	div#content {
+
+		//
+		// Headlines
+		//
+		div.do-register-text,
+		div.do-login-text,
+		div.do-dontregister-text
+		{
+			margin-top: 30px;
+		}
+
+		//
+		// Buttons
+		//
+		div.do-proceed {
+			padding-top: 10px;
+			margin-bottom: 50px;
+			a.button {
+				@include button-submit-normal();
+
+
+			}
+		}
+	}
+
+
+
+
+
+
+}

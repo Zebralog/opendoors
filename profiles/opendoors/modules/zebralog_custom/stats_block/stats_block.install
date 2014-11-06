@@ -1,0 +1,35 @@
+<?php
+
+/**
+ * No install function needed. We use variables for configuration and content
+ * caching.
+ */
+
+
+/**
+ * New permissions for viewing the statistic block and its configuration page.
+ */
+function stats_block_update_7000() {
+  $message = 'Check <a href="@url">new permissions</a> for stats block configuration page.';
+  $variables = array('@url' => base_path() . 'admin/people/permissions#module-stats_block');
+  drupal_set_message(t($message, $variables));
+  watchdog('Statistics', $message, $variables);
+}
+
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Delete stats block configuration variables.
+ *
+ * @author Marco Rademacher <rademacher@zebralog.de>
+ */
+function stats_block_uninstall() {
+  drupal_load('module', 'stats_block');
+  $piwik_settings = _stats_block_get_settings();
+  foreach ($piwik_settings as $key => $val) {
+    variable_del('stats_block_' . $key);
+  }
+  variable_del('stats_block_show_metrics');
+  variable_del('stats_block_statistics');
+}

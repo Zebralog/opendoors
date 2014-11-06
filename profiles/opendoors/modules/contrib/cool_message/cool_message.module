@@ -1,0 +1,87 @@
+<?php
+
+/**
+ * @file
+ * cool_message.module
+ * Provides cool notification messages.
+ */
+
+/**
+ * Implements hook_theme().
+ */
+function cool_message_theme($existing, $type, $theme, $path) {
+  return array(
+    'status_messages_box' => array(
+      'variables' => array('display' => NULL),
+    ),
+    'cool_messages' => array(
+      'variables' => array('title' => NULL, 'type' => NULL, 'messages' => NULL),
+      'template' => 'cool-messages',
+    ),
+  );
+}
+
+/**
+ * Implements hook_theme_registry_alter().
+ */
+function cool_message_theme_registry_alter(&$theme_registry) {
+  $theme_registry['status_messages']['function'] = 'cool_message_status_messages';
+}
+
+/**
+ * Show themed messages.
+ */
+function cool_message_status_messages($variables) {
+  $path = drupal_get_path('module', 'cool_message');
+  drupal_add_css($path . '/cool_message.css');
+  drupal_add_js($path . '/cool_message.js');
+  $output = theme('status_messages_box', array('display' => $variables['display']));
+  return $output;
+}
+
+/**
+ * Return a themed set of messages.
+ */
+function theme_status_messages_box($variables) {
+  $output = '';
+  $output .= "<div id=\"messages-box\">\n";
+  foreach (drupal_get_messages($variables['display']) as $type => $messages) {
+    $output .= theme('cool_messages', array('type' => $type, 'messages' => $messages));
+  }
+  $output .= "</div>\n";
+  return $output;
+}
+
+/**
+ * Process variables for cool-messages.tpl.php.
+ *
+ * The $variables array contains the following arguments:
+ * - $title
+ * - $type
+ * - $messages
+ *
+ * @see cool-messages.tpl.php
+ */
+function template_preprocess_cool_messages(&$variables) {
+  $status_heading = array(
+    'status'  => t('Status message'), 
+    'error'   => t('Error message'), 
+    'warning' => t('Warning message'),
+  );  
+  $messages = $variables['messages'];
+  $output = '';
+  if (!empty($status_heading[$variables['type']])) {
+    $variables['title'] = $status_heading[$variables['type']];
+  }  
+  if (count($messages) > 1) {
+    $output .= " <ul>\n";
+    foreach ($messages as $message) {
+      $output .= '  <li>' . $message . "</li>\n";
+    }
+    $output .= " </ul>\n";
+  }
+  else {
+    $output .= $messages[0];
+  }
+  $variables['messages'] = $output;
+}

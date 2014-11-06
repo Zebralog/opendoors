@@ -1,0 +1,224 @@
+<?php
+/**
+ * @file
+ * The overlay paths module.
+ */
+
+/**
+ * Get an array of non-administrative overlay paths.
+ */
+function overlay_paths_get_overlay_paths() {
+  $paths = &drupal_static(__FUNCTION__);
+  if (!isset($paths)) {
+    $paths = module_invoke_all('overlay_paths');
+    drupal_alter('overlay_paths', $paths);
+  }
+  return $paths;
+}
+
+/**
+ * Get a pattern of non-administrative overlay paths.
+ */
+function overlay_paths_get_overlay_patterns($mode = TRUE) {
+  $patterns = &drupal_static(__FUNCTION__);
+  if (!isset($patterns[$mode])) {
+    $paths = overlay_paths_admin_paths($mode);
+    $patterns[$mode] = implode("\n", array_keys($paths));
+  }
+  return $patterns[$mode];
+}
+
+/**
+ * Implements hook_admin_paths().
+ *
+ * To make paths appear in the overlay, we need to declare them as an admin
+ * path. This will of course mean that Drupal tries to make them use the admin
+ * theme too, but we undo that in overlay_paths_custom_theme().
+ *
+ * @param $mode
+ *   Defaults to TRUE. Not passed in when invoked as a hook, but FALSE may be
+ *   passed in to obtain paths that are explicitly set to NOT appear in the
+ *   overlay.
+ */
+function overlay_paths_admin_paths($mode = TRUE) {
+  $paths = &drupal_static(__FUNCTION__);
+  if (!isset($paths[$mode])) {
+    $paths[$mode] = array();
+    foreach (overlay_paths_get_overlay_paths() as $path => $v) {
+      if (($v !== FALSE && $mode) || (!$mode && $v === FALSE)) {
+        $paths[$mode][$path] = TRUE;
+      }
+    }
+  }
+  return $paths[$mode];
+}
+
+/**
+ * Implements hook_init().
+ *
+ * Determine whether the current page request is destined to appear in the
+ * parent window or in the overlay window, and format the page accordingly.
+ *
+ * @see overlay_set_mode()
+ */
+function overlay_paths_init() {
+  global $user;
+
+  $mode = overlay_get_mode();
+
+  // Only act if the user has access to the overlay and a mode was not already
+  // set. Other modules can also enable the overlay directly for other uses.
+  $use_overlay = !isset($user->data['overlay']) || $user->data['overlay'];
+  if (empty($mode) && user_access('access overlay') && $use_overlay) {
+    $current_path = current_path();
+    // After overlay is enabled on the modules page, redirect to
+    // <front>#overlay=admin/modules to actually enable the overlay.
+    if (isset($_SESSION['overlay_enable_redirect']) && $_SESSION['overlay_enable_redirect']) {
+      unset($_SESSION['overlay_enable_redirect']);
+      drupal_goto('<front>', array('fragment' => 'overlay=' . $current_path));
+    }
+
+    if (isset($_GET['render']) && $_GET['render'] == 'overlay') {
+      // redirect to the final destination.
+      if (isset($_SESSION['overlay_close_dialog'])) {
+        call_user_func_array('overlay_close_dialog', $_SESSION['overlay_close_dialog']);
+        unset($_SESSION['overlay_close_dialog']);
+      }
+      // If this page shouldn't be rendered here, redirect to the parent.
+      if (!overlay_paths_is_overlay($current_path)) {
+        overlay_close_dialog($current_path, array('query' => drupal_get_query_parameters(NULL, array('q', 'render'))));
+      }
+
+      // Indicate that we are viewing an overlay child page.
+      overlay_set_mode('child');
+
+      // Unset the render parameter to avoid it being included in URLs on the page.
+      unset($_GET['render']);
+    }
+    // Do not enable the overlay if we already are on an admin page.
+    elseif (!overlay_paths_is_overlay($current_path)) {
+      // Otherwise add overlay parent code and our behavior.
+      overlay_set_mode('parent');
+    }
+  }
+}
+
+/**
+ * Return whether $path should be rendered in an overlay or not.
+ */
+function overlay_paths_is_overlay($path) {
+  // returns TRUE if current path is returned by a hook_overlay_path, or
+  // is an admin path that wasn't returned by a hook_overlay_path equal to FALSE
+  $return =  drupal_match_path($path, overlay_paths_get_overlay_patterns()) || drupal_match_path(drupal_get_path_alias($path), overlay_paths_get_overlay_patterns()) || (path_is_admin($path) && !drupal_match_path($path, overlay_paths_get_overlay_patterns(FALSE)));
+  return $return;
+}
+
+/**
+ * Implements hook_custom_theme().
+ *
+ * We duplicate the functionality of the system module's implementation, but
+ * check to see if we're actually on one of the non-administrative overlay pages
+ * too.
+ *
+ * @see system_custom_theme()
+ */
+function overlay_paths_custom_theme() {
+  if (user_access('view the administration theme') && path_is_admin(current_path())  && !drupal_match_path(current_path(), overlay_paths_get_overlay_patterns())) {
+    return variable_get('admin_theme');
+  }
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ *
+ * We're going to swap out system module's implementation of hook_custom_theme()
+ * and overlay's hook_init() for our own.
+ */
+function overlay_paths_module_implements_alter(&$implementations, $hook) {
+  switch ($hook) {
+    case 'custom_theme' :
+      if (isset($implementations['overlay_paths'])) {
+        unset($implementations['system']);
+      }
+      break;
+    case 'init' :
+    case 'overlay_parent_initialize' :
+      if (isset($implementations['overlay_paths'])) {
+        unset($implementations['overlay']);
+      }
+      break;
+  }
+}
+
+/**
+ * Implements hook_overlay_parent_initialize().
+ *
+ * Replaces overlay's implementation, which adds settings for admin paths, but
+ * will include those explicitly excluded from using the overlay.
+ */
+function overlay_paths_overlay_parent_initialize() {
+  // Let the client side know which paths are to be used in the overlay.
+  $paths = path_get_admin_paths();
+  $paths['non_admin'] = overlay_paths_get_overlay_patterns(FALSE);
+  foreach ($paths as $k => $type) {
+    $paths[$k] = str_replace('<front>', variable_get('site_frontpage', 'node'), $type);
+  }
+  drupal_add_js(array('overlay' => array('paths' => $paths)), 'setting');
+  $path_prefixes = array();
+  if (module_exists('locale') && variable_get('locale_language_negotiation_url_part', LOCALE_LANGUAGE_NEGOTIATION_URL_PREFIX) == LOCALE_LANGUAGE_NEGOTIATION_URL_PREFIX) {
+    // Get languages grouped by status and select only the enabled ones.
+    $languages = language_list('enabled');
+    $languages = $languages[1];
+
+    $path_prefixes = array();
+    foreach ($languages as $language) {
+      if ($language->prefix) {
+        $path_prefixes[] = $language->prefix;
+      }
+    }
+  }
+  drupal_add_js(array('overlay' => array('pathPrefixes' => $path_prefixes)), 'setting');
+  // Pass along the Ajax callback for rerendering sections of the parent window.
+  drupal_add_js(array('overlay' => array('ajaxCallback' => 'overlay-ajax')), 'setting');
+}
+
+/**
+ * Implements hook_overlay_child_initialize().
+ */
+function overlay_paths_overlay_child_initialize() {
+  // Scan the current path to try to find and custom styles
+  $paths = array_filter(overlay_paths_get_overlay_paths(), 'is_array');
+  foreach ($paths as $path => $options) {
+    if (drupal_match_path(current_path(), $path) || drupal_match_path(drupal_get_path_alias(current_path()), $path)) {
+      if (isset($options['width'])) {
+        if ($width = overlay_paths_match_width($options['width'])) {
+          $css = <<<EOT
+#overlay {
+  width: $width;
+  min-width: $width;
+  margin: 0 auto;
+}
+EOT;
+          drupal_add_css($css, array('type' => 'inline'));
+        }
+      }
+
+      break;
+    }
+  }
+}
+
+/**
+ * Return a valid CSS width value from the given string.
+ */
+function overlay_paths_match_width($width) {
+  $matches = array();
+  if (preg_match('#^\d+(px|em|%)?$#', $width, $matches)) {
+    $width = $matches[0];
+    if (empty($matches[1])) {
+      $width .= 'px';
+    }
+    return $width;
+  }
+  return FALSE;
+}

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Opendoors azure file storage feature.
+ */
+
+include_once 'od_azure_file_storage.features.inc';

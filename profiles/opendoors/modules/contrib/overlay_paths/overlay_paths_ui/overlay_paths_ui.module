@@ -1,0 +1,45 @@
+<?php
+/**
+ * @file
+ * The overlay paths ui module.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function overlay_paths_ui_menu() {
+  $items = array();
+
+  $items['admin/config/system/overlay_paths_ui'] = array(
+    'title' => 'Overlay paths',
+    'description' => 'Allows you to specify paths that should use the overlay without using the admin theme.',
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => array('administer site configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('overlay_paths_admin_form'),
+    'file' => 'overlay_paths_ui.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * The default paths that this module should enable.
+ */
+function _overlay_paths_ui_default() {
+  return array(
+    'node/add' => array(
+      'width' => '600px',
+    ),
+    'user/register' => TRUE,
+    'user/register/*' => TRUE,
+    'user/register/step/2' => FALSE
+  );
+}
+
+/**
+ * Implements hook_overlay_paths().
+ */
+function overlay_paths_ui_overlay_paths() {
+  return variable_get('overlay_paths_ui_paths', _overlay_paths_ui_default());
+}

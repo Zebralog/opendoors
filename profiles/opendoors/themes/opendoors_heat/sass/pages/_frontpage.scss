@@ -1,0 +1,853 @@
+@import "../init";
+//
+// Pane Welcome-text / Slider
+//
+div.welcome-text {
+
+	@include zen-clear();
+	margin-right:  $zen-gutter-width / 2;
+	margin-left:  $zen-gutter-width / 2;
+
+	margin-bottom: $vertical-margin;
+
+	// @include zen-grid-container();
+	// @include zen-nested-container();
+	//	margin-right:  $zen-gutter-width / 2;
+	//	margin-left:  $zen-gutter-width / 2;
+
+	//
+	// Intro text
+	// NOTE: this node is controlled by the template node--pane-embedded.tpl.php
+	//
+	article.node-pane-embedded {
+
+		// header contains image and title, those are embedded separately
+		header {
+			display: none;
+		}
+
+		//image
+		div.image {
+			@include zen-grid-item(2, 1);
+			float: left;
+			img {
+				@include border-radius( 5px );
+				width: 100%;
+			}
+		}
+
+		// title + body
+		div.article-content {
+			@include zen-grid-item(10, 3);
+
+			h2 {
+				margin: 0;
+			}
+			p {
+				margin-top: 0;
+				font-size: px2em(18px);
+			}
+		}
+	}
+
+
+	//
+	// Flexslider
+	//
+	div.flexslider {
+		background: transparent;
+		border: none;
+		box-shadow: 0 0 0 $gray-background; // remove shadow
+		ul.slides {
+			li {
+				position: relative;
+				min-height: 135px;
+				//
+				// header (title)
+				//
+				header {
+//					width: 67%;
+					padding-left: 200px;
+//					float: right;
+					a {
+						color: $white-font;
+						text-decoration: none;
+						&:hover, &:focus {
+							text-decoration: underline;
+						}
+						@include border-radius(10px);
+						color: $black-font;
+					}
+				}
+				//
+				// image
+				//
+				div.field-type-image {
+					position: absolute;
+					left: 0;
+					top: 0;
+					float: left;
+					width: 170px;
+//					padding-right: 15px;
+					img {
+						max-width: 170px;
+						@include border-radius(10px);
+					}
+				}
+				//
+				// text
+				//
+				div.field-name-body {
+//					float: right;
+//					width: 67%;
+					padding-left: 200px;
+					p {
+					}
+				}
+			}
+		}
+		//
+		// Slide navigation
+		//
+		ul.flex-direction-nav a.flex-prev,
+		ul.flex-direction-nav a.flex-next {
+			z-index: 30;
+			&:before {
+				padding-top: 10px;
+				color: $black-font;
+				font-size: 26px;
+			}
+		}
+		ul.flex-direction-nav a.flex-prev {
+			left: -22px;
+		}
+		ul.flex-direction-nav a.flex-next {
+			right: -22px;
+		}
+	}
+	//
+	// Slider Responsive overrrides
+	//
+	@media all and (max-width: 768px){
+		div.flexslider {
+			ul.slides {
+				li {
+					//
+					// header (title)
+					//
+					header {
+						float: none;
+						width: 100%;
+						padding: 0;
+						z-index: 10;
+
+						position: absolute;
+						top: 10px;
+						left: 15px;
+
+						h2 {
+							display: inline-block;
+							padding: 5px;
+							background: $white-font;
+							font-size: px2em(22px);
+							opacity: 0.8;
+							@include border-radius(10px);
+						}
+					}
+					//
+					// image
+					//
+					div.field-type-image {
+						position: relative;
+						float: none;
+						width: 100%;
+						padding: 0;
+						img {
+							max-width: none;
+						}
+					}
+					//
+					// text
+					//
+					div.field-name-body {
+						float: none;
+						width: 100%;
+						padding: 5px 15px 10px;
+						position: absolute;
+						bottom: 0;
+						background: $black-font;
+						color: $white-font;
+						opacity: 0.6;
+
+						@include border-bottom-left-radius(10px);
+						@include border-bottom-right-radius(10px);
+
+						a {
+							display: inline-block;
+							color: $white-font;
+							background: #000000;
+							@include border-radius(5px);
+							padding: 0 5px;
+						}
+
+					}
+				}
+			}
+		}
+	}
+	@media all and (max-width: 400px){
+
+		div.flexslider ul.slides li {
+//			header { position: relative; }
+			div.field-type-image {
+				img {
+					@include border-bottom-right-radius(0);
+					@include border-bottom-left-radius(0);
+				}
+			}
+			div.field-name-body {
+				position: relative;
+			}
+		}
+
+	}
+
+
+
+}
+
+//
+// Proposal Form
+//
+div.proposal-form {
+
+	@include zen-clear();
+	// Note: it is not possible to assign @include zen-grid-item(12,1) to the div.proposal-form, because the background-styles of this element must be assigned to THIS div. There is no inner div which could "hold" the background-color. (It would mean a not reasonable effort to add an inner div to this element.
+	// Because this element stretches from the very left to the very right, this is not a big deal, its with is left untouched and instead a margin is applied to the left and to the right.
+	margin-right:  $zen-gutter-width / 2;
+	margin-left:  $zen-gutter-width / 2;
+
+
+	@include box();
+	margin-bottom: $vertical-margin;
+
+//	@include gradient( $ocean, $blue);
+	color: $white-font;
+
+	// NOTE: gets it's background-color through theme-settings.php + opendoors_heat.info
+//	background-color: $heatmap0;
+
+	//
+	// Actual question, NOT the textarea bubble!!! (Question heading and body.)
+	//
+	h2.pane-title {
+		@include box(white);
+		@include border-bottom-left-radius(0); // remove bottom left rounded corner so these two boxes, the heading and the content "melt" together
+		@include border-bottom-right-radius(0); // remove bottom right rounded corner
+		font-size: px2em(36px);
+		line-height: 1.6em;
+		color: $black-font;
+		margin: 0;
+		padding-top: 10px;
+		padding-bottom: 5px;
+	}
+	div.title-sub-heading {
+		@include box(white);
+		@include border-top-left-radius(0); // remove top left rounded corner
+		@include border-top-right-radius(0); // remove top right rounded corner
+		font-size: px2em(22px);
+		color: $black-font;
+		padding-top: 0;
+		padding-bottom: 20px;
+
+	}
+
+	// label "Body"
+	label[for="edit-body-und-0-value"] {
+		display: none;
+	}
+	//
+	// Form textarea (Bubble)
+	//
+
+	div.form-type-textarea {
+		position: relative;
+		&:before {
+			content: url(../images/bubble-hugehook.png);
+			position: absolute;
+			left: 161px;
+			bottom: -54px;
+		}
+	}
+
+	div.form-textarea-wrapper {
+		position: relative;
+		//
+		&:before {
+			content: " ";
+			position: absolute;
+			display: block;
+			left: 165px;
+			bottom: -1px;
+			width: 25px;
+			height: 9px;
+			// background-color is set via theme-settings.php + opendoors_heat.info
+		}
+
+		textarea {
+			height: 260px;
+			background: transparent;
+			color: $white-font;
+			border: 3px dashed rgba(255, 255, 255, .5);
+			padding: 15px;
+			font-size: px2em(22px);
+		}
+		div.grippie {
+			display: none;
+		}
+
+	}
+	// Hide Bubble hook covers when CKE
+	div.form-item-body-und-0-value,
+	div.form-item-field-municipal-response-und-0-value {
+		div.form-textarea-wrapper:after {
+			display: none;
+		}
+	}
+
+	//
+	// "Disable rich-text"-Link
+	//
+	div.wysiwyg-toggle-wrapper {
+		padding-top: 5px;
+		a {
+			color: white;
+		}
+	}
+	// "Disable rich-text"-Link under top textarea ONLY!
+	div#edit-body {
+		div.wysiwyg-toggle-wrapper {
+			float: left;
+		}
+	}
+
+
+	//
+	// Characters-left counter
+	//
+	div#edit-body-und-0-value-counter {
+		padding-top: 5px;
+		float: right;
+		opacity: 0.5;
+	}
+
+	//
+	// fieldset filter
+	//
+	fieldset.filter-wrapper {
+		display: none;
+	}
+
+	//
+	// Category chooser: Radio buttons
+	//
+	div#edit-field-category {
+		div#edit-field-category-und {
+			@include  border-radius(25px);
+			width: 100%;
+			border: none;
+		}
+		div.form-type-radio {
+			label {
+				padding-left: 28px;
+//				font-size: px2em(18px);
+//				color: $black-font;
+				@extend .category-label;
+				padding: 3px 15px 3px 25px !important;
+				font-weight: normal;
+				margin-bottom: 10px;
+
+				&:hover, &:focus {
+//					background: $gray-dark;
+//					color: $white-font;
+				}
+
+
+			}
+			input:checked + label {
+				&:before {
+					font-size: px2em(18px);
+					top: 3px;
+					left: 6px;
+				}
+			}
+			//
+			// BUBBLE
+			// Description (opens as BUBBLE!!!!!)
+			//
+			div.description {
+				bottom: 50px;
+				p {
+					color: $black-font;
+				}
+				// Bubble hook
+				&:after {
+					left: 115px;
+				}
+			}
+			&:hover, &:focus {
+				//
+				// Description-Bubble
+				//
+				div.description {
+				}
+			}
+		}
+	}
+
+	//
+	// button
+	//
+	div#edit-actions {
+		text-align: center;
+		padding-bottom: 20px;
+
+		// huge button style
+		input {
+			@include button-submit-huge( $white-font, transparent, white, $gray-dark, "../images/arrow-right-white.png", "../images/arrow-right-white.png" );
+		}
+
+	}
+
+	//
+	// Admins, Editors, Mods only:
+	// Response of the municipality form
+	//
+	fieldset {
+		border: none;
+		padding: 0;
+
+		legend {
+			font-size: px2em(24px);
+			padding: 20px 0 10px;
+			a {
+				color: white;
+			}
+		}
+	}
+
+
+
+}
+
+
+
+
+//
+// Municipal response area
+//
+fieldset#node_proposal_form_group_municipal_response {
+
+	position: relative;
+	padding-top: 50px !important;
+
+	// hide bubble-hook
+	div.form-textarea-wrapper:before {
+		content: none !important;
+	}
+
+	// links general
+	a {
+		color: $black-font;
+
+	}
+
+	legend {
+		position: absolute;
+		left: 10px;
+		top: 0;
+		a {
+		}
+	}
+
+	div.fieldset-wrapper {
+		position: relative;
+		div#edit-field-municipal-response-date-und-0-value {
+			padding-left: 0;
+		}
+		div#field-municipal-response-date-add-more-wrapper {
+			padding-left: 0;
+			span.fieldset-legend {
+				display: none;
+			}
+		}
+	}
+
+
+	padding: 15px;
+	border: 1px solid black;
+	background: $white-font;
+	color: $black-font;
+
+	//
+	// image upload
+	//
+	div#edit-field-municipal-response-image {
+		border-top: 1px solid #666;
+		margin-top: 30px;
+	}
+
+}
+
+//
+// Revision information
+//
+fieldset#edit-revision-information {
+	div.form-textarea-wrapper {
+		background: $white-font;
+		&:before {
+			content: none;
+		}
+
+		textarea {
+			border: none;
+			height: 150px;
+
+		}
+	}
+}
+
+
+//
+// Proposals-View headline
+//
+div#pane-proposal-discussion-intro {
+
+	@include zen-clear();
+	@include zen-grid-item(12, 1);
+
+	//
+	// hide the actual title of this node cause its repeated in the body part.
+	//
+	header {
+		display: none;
+	}
+	//
+	// here, within the body part the title is repeated
+	//
+	h2 {
+		margin: 0;
+	}
+
+	div.article-body {
+		display: none;
+	}
+
+}
+
+//
+// Statistics block
+//
+div.front-stats-block {
+
+	@include zen-clear();
+	@include zen-grid-item(12, 1);
+
+	padding-top: 10px;
+	color: $gray-font;
+	line-height: 1.3em;
+
+	div.statistics-row {
+
+		float: left;
+		margin-right: 15px;
+
+		// label
+		span.label {
+			font-size: px2em(14px);
+			margin-right: 7px;
+		}
+		// value
+		span.value {
+			color: $black-font;
+		}
+	}
+
+	div.last-cron-run {
+		display: none;
+//		padding-top: 3px;
+//		font-size: px2em(14px);
+	}
+
+}
+
+
+
+//
+// Filter bar (All, Recommended, Hot, Search)
+//
+div#pane-proposal-discussion-filter {
+
+	@include zen-grid-item(8, 5);
+
+	margin-top: 12px;
+	@extend .clearfix;
+	// margin-bottom: $vertical-margin;
+
+	//
+	// primary filters "All", "Recommended", "Hot", "Mine")
+	//
+	ul.primary-filters {
+
+		float: right;
+		padding: 0;
+		margin: 0 0 15px;
+
+		li {
+			display: inline-block;
+			margin-left: 15px;
+			list-style-type: none;
+			font-size: px2em(22px);
+
+			a,span {
+				text-decoration: none;
+				color: $black-font;
+				cursor: pointer;
+				&:hover, &:focus {
+					color: $highlight;
+
+				}
+			}
+			// active link
+			&.query-active a {
+				color: $highlight;
+			}
+		}
+		// overwrite search link
+		li.filter-search {
+			span {
+				//font-size: 0;
+				//font-size: px2em(16px);
+				&:after {
+					content: " ";
+					font-family: "FontAwesome";
+				}
+			}
+		}
+
+		li.filter-all {  }
+		li.filter-featured {  }
+		li.filter-hot {  }
+		li.filter-mine {  }
+		li.filter-search {  }
+	}
+
+
+	//
+	// Search input field and Button
+	//
+	form#views-exposed-form-proposal-discussion-page {
+		//	float: right;
+		//	@extend .clearfix;
+
+		clear: right;
+		float: right;
+		min-height: 40px;
+
+
+		div.views-exposed-form {
+
+
+			margin-left: 30px;
+
+//			background: white;
+//			@include border-radius(10px);
+			padding: 0 0;
+
+			* {
+				padding: 0;
+				margin: 0;
+			}
+
+			// overwrite default form styles
+			.views-exposed-form .views-exposed-widget {
+				padding: 0;
+			}
+
+			//
+			div.views-exposed-widgets {
+
+
+				// margin-bottom: 60px;
+
+				position: relative;
+
+				// search input field
+				div#edit-keys-wrapper {
+					position: relative;
+					input {
+						padding: 1px 10px;
+						border: none;
+						background: white;
+						@include border-top-left-radius(10px);
+						@include border-bottom-left-radius(10px);
+					}
+				}
+				// button
+				div.views-submit-button {
+					input {
+						padding: 0 8px;
+						border: none;
+						@include border-top-right-radius(10px);
+						@include border-bottom-right-radius(10px);
+						background: $highlight;
+						color: white;
+						@include single-transition( all, 0.3s );
+						&:hover, &:focus {
+							background: $highlight-dark;
+							@include single-transition( all, 0.3s );
+						}
+					}
+				}
+			}
+		}
+
+
+	}
+
+
+	//
+	// Heatmap legend (Cold, 0, 20, 40, 60, 80, 100, Hot)
+	//
+	div.heatmap-legend {
+
+		float: right;
+
+		// white hook top center
+		// @extend .hook-top;
+
+		background: white;
+		@include border-radius(10px);
+		padding: 1px 10px 0 !important;
+
+		margin-bottom: 0;
+
+		//
+		// Both span "Cold" + span "Hot"
+		//
+		span.cold, span.hot {
+			display: inline-block;
+			font-size: px2em(18px);
+		}
+		// span "Cold"
+		span.cold {
+			color: $heatmap1;
+			padding-right: 10px;
+		}
+		// span "Hot"
+		span.hot {
+			color: $heatmap5;
+			padding-left: 10px;
+		}
+
+		// colored circles
+		li {
+			position: relative;
+			top: -4px;
+			display: inline-block;
+			list-style-type: none;
+			margin: 0 2px;
+			font-size: 0;
+			width: 20px;
+			height: 20px;
+			@include border-radius(10px);
+		}
+
+	}
+
+
+	//
+	// secondary filters ( categories)
+	//
+	ul.secondary-filters {
+		display: block;
+		float: right;
+		margin: 0;
+		min-height: 80px;
+		padding-bottom: 15px;
+
+		li {
+			display: inline-block;
+			list-style-type: none;
+			margin-left: 15px;
+			margin-bottom: 10px;
+			float: right;
+
+			a {
+				@extend .category-label;
+				text-decoration: none;
+				color: $black-font;
+				&:hover, &:focus {
+					color: $highlight;
+				}
+				&.active-term {
+					&:before {
+						content: " ";
+						font-family: "FontAwesome";
+					}
+//					content: " asdf";
+//					font-family: "FontAwesome";
+//					left: 0;
+//					position: absolute;
+//					top: -1px;
+				}
+			}
+		}
+	}
+
+
+
+
+}
+// Filter bar overrides
+@media all and (max-width:768px) {
+
+	div#pane-proposal-discussion-filter{
+		@include zen-clear();
+		@include zen-grid-item(12, 1);
+
+		ul.primary-filters {
+			float: left;
+			li {
+				margin-left: 0;
+				margin-right: 15px;
+			}
+		}
+
+		ul.secondary-filters {
+			padding-left: 0;
+			li {
+				float: left;
+				margin-left: 0;
+				margin-right: 15px;
+			}
+		}
+
+	}
+
+
+}
+
+
+//
+// Pane Proposals List
+//
+div.view-proposals {
+
+	@include zen-clear();
+
+	//
+	// NOTE: find the styles for the proposals (the colored tiles) in the _node--proposal.scss partial.
+	//
+
+}

@@ -1,0 +1,19 @@
+name = SQL Server
+description = Driver for SQL Server and SQL Azure.
+core = 7.x
+package = Database engines
+
+; This is slightly evil, but for a good cause. We need the module to be
+; enabled in order to receive security updated and track usage data.
+required = TRUE
+
+; Tests
+files[] = tests/sqlsrv.schema.test
+files[] = tests/sqlsrv.select.test
+
+; Information added by Drupal.org packaging script on 2014-10-05
+version = "7.x-1.3"
+core = "7.x"
+project = "sqlsrv"
+datestamp = "1412513228"
+

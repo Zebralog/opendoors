@@ -1,0 +1,96 @@
+//
+// Category chooser: Radio buttons
+//
+
+div#edit-field-category {
+	clear: both;
+	text-align: center;
+	padding: 30px;
+	label[for="edit-field-category-und"]{
+		display: none;
+	}
+	div#edit-field-category-und {
+		min-height: 50px;
+		margin: 10px auto;
+		padding: 13px 15px 10px;
+		display: inline-block;
+		border: 1px solid white;
+	}
+	div.form-type-radios > div.description {
+		font-size: 1em;
+		opacity: 0.5;
+	}
+	//
+	// option
+	//
+	div.form-type-radio {
+		position: relative;
+		display: inline-block;
+		input.form-radio {
+			display: none;
+		}
+		//
+		// label BOTH checked AND not checked
+		//
+		label {
+			padding-left: 17px;
+			margin-left: 10px;
+			margin-right: 10px;
+			cursor: pointer;
+			opacity: 0.6;
+			&:hover, &:focus {
+				opacity: 1;
+			}
+		}
+		input:checked + label {
+			position: relative;
+			opacity: 1;
+			&:before {
+				content: " ";
+				position: absolute;
+				left: 0; top: -1px;
+				font-family: "FontAwesome";
+			}
+		}
+		//
+		// BUBBLE
+		// Description (opens as BUBBLE!!!!!)
+		//
+		div.description {
+			display: none;
+			position: absolute;
+			z-index: 51;
+			left: -70%;
+			bottom: 35px;
+			min-height: 40px;
+			width: 300px;
+			background: #cccccc;
+			padding: 15px 15px 5px;
+			-webkit-border-radius: 10px;
+			-moz-border-radius: 10px;
+			border-radius: 10px;
+			font-size: 1em !important;
+			// Bubble hook
+			&:after {
+				content: '';
+				position: absolute;
+				border-style: solid;
+				border-width: 15px 15px 0;
+				border-color: #cccccc transparent;
+				display: block;
+				width: 0;
+				z-index: 1;
+				bottom: -15px;
+				left: 135px;
+			}
+		}
+		&:hover, &:focus {
+			//
+			// Description-Bubble
+			//
+			div.description {
+				display: block;
+			}
+		}
+	}
+}

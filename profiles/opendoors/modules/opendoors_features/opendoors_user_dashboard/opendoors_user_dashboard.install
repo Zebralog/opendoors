@@ -1,0 +1,9 @@
+<?php
+
+function opendoors_user_dashboard_install() {
+  db_update('system')
+    ->fields(array('weight' => 1))
+    ->condition('name', 'opendoors_user_dashboard', '=')
+    ->execute();
+}
+?>

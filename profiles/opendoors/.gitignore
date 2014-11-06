@@ -1,0 +1,43 @@
+# Ignore the following files in the project.
+
+# Ignore configuration files that may contain sensitive information.
+sites/*/settings.php
+sites/*/local.settings.php
+sites/*.localhost
+sites/*/settings*.php
+sites/*/aliases.drushrc.php
+sites/dev.*
+sites/dev
+
+# Backup files
+*~
+/backup
+
+# automatically downloaded by devel module
+FirePHPCore
+
+# Alien source control
+CVS
+.cvsignore
+*#*
+/.msg
+.svn
+
+# Zend debugger files
+/dummy.php
+
+# Eclipse stuff
+/.settings
+/.project
+/.buildpath
+
+# Netbeans stuff (Added by Lot)
+nbproject
+
+# google auth files
+/google*.html
+
+# Any temporary files
+.DS_Store
+*.zip
+.sass-cache

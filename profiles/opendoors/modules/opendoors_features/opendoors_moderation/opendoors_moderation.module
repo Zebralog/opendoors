@@ -1,0 +1,19 @@
+<?php
+/**
+ * @file
+ * Code for the Opendoors moderation feature.
+ */
+
+include_once 'opendoors_moderation.features.inc';
+
+/**
+ * Implements hook_permission().
+ */
+function opendoors_moderation_permission() {
+  return array(
+    'use moderation' => array(
+      'title' => t('Use moderation backend'),
+      'description' => t('Moderate proposals and comments'),
+    ),
+  );
+}

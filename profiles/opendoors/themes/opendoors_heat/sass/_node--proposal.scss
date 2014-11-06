@@ -1,0 +1,879 @@
+@import "init";
+
+
+//
+// variables
+//
+// position of bubble hook from top
+$bubble-hook-top: 24px;
+// amount of pixels, the question is shorter on the right side and the answer is shorter on the left side
+$indentation : 40px;
+
+
+@media all and (min-width: 569px) and (max-width: 959px) {
+	article.col1of2 {
+		@include zen-clear();
+		@include zen-grid-item(6, 1);
+	}
+	article.col2of2 {
+		@include zen-grid-item(6, 7);
+	}
+}
+
+@media all and (min-width: 960px) {
+	article.col1of3 {
+		@include zen-clear();
+		@include zen-grid-item(4, 1);
+	}
+	article.col2of3 {
+		@include zen-grid-item(4, 5);
+	}
+	article.col3of3 {
+		@include zen-grid-item(4, 9);
+	}
+}
+
+
+//
+// Proposal item
+//
+article.node-proposal {
+
+	position: relative;
+
+	//
+	// link to heatmap NOTE: the actual heatmap styles follow below
+	//
+	a.node-url {
+		text-decoration: none;
+
+		background-color: transparent;
+
+		div.heatmap {
+			@include single-transition( all, 0.5s );
+		}
+
+		&:hover div.heatmap {
+			background-color: $gray-dark;
+			div.bubble-teaser span.border-cover-snippet { background-color: $gray-dark; @include single-transition( all, 0.3s ); }
+
+			// category label text
+			div.field-name-field-category  {
+				color: $black-font;
+			}
+
+			@include single-transition( all, 0.3s );
+		}
+	}
+
+	//
+	// Actual heatmap item !!!
+	//
+	div.heatmap {
+		position: relative;
+		@include box();
+		padding-bottom: 30px;
+		color: $white-font;
+	}
+
+	//
+	// header with: category, count of comments and count of votings
+	//
+	header {
+		@extend .clearfix;
+	}
+
+
+	//
+	// Social share icon + underlying links to Facebook, Twitter, Google+
+	// PURE CSS hover visible/hidden box
+	//
+	.hover-box-css {
+		position: absolute;
+		right: 0;
+		top: 0;
+//		width: 330px;
+
+		width: 100%;
+
+		// always visible icon for triggering the visibility of the actual content container
+		span.trigger {
+			position: absolute;
+			right: 30px;
+			top: 14px;
+			height: 30px;
+			width: 30px;
+			background: url(../images/icon_socialshare_stripe.png) 0 0;
+		}
+		// actual content, which is by default not visible. (Its shown when hovering over the parent container somewhere.)
+		div.content-container {
+			position: absolute;
+			right: 0;
+			top: 0;
+			width: 100%;
+			padding-left: 15px;
+			padding-right: 15px;
+			min-height: 0px;
+			@include single-transition( all, 0.3s );
+			text-align: center;
+			margin-bottom: 0;
+			ul {
+				height: 0;
+				overflow: hidden;
+				@include box($black-font);
+				padding: 0 15px;
+				margin: 0;
+				li {
+					list-style-type: none;
+					display: inline-block;
+					margin-bottom: 15px;
+					font-family: "Open Sans";
+					line-height: 15px;
+					a {
+						text-decoration: none;
+						color: $gray-font;
+						//						@include single-transition( all, 0.3s );
+						&:hover, &:focus {
+							//							@include single-transition( all, 0.1s );
+							color: white;
+						}
+					}
+					a:before {
+						margin-right: 5px;
+						font-family: "FontAwesome";
+						font-size: px2em(22px);
+						position: relative;
+						top: 3px;
+					}
+				}
+				li.facebook a {
+					&:before {
+						content: "";
+					}
+				}
+				li.twitter a {
+					margin-left: 20px;
+					&:before {
+						content: "";
+					}
+				}
+				li.googleplus a {
+					margin-left: 20px;
+					padding-right: 5px;
+					&:before {
+						content: "";
+					}
+				}
+			}
+		}
+		//
+		// Actual magic is here!
+		//
+		&:hover {
+			// highlight trigger icon
+			span.trigger {
+				background-position: 0 -100px;
+			}
+			// SHOW actual content!!!!
+			div.content-container{
+				height: auto;
+				@include single-transition( all, 0.3s );
+
+				ul {
+					padding: 15px 15px 5px;
+					height: auto;
+				}
+			}
+		}
+	}
+
+
+	//
+	// social share icon
+	//
+	span.share-icon {
+		display: inline-block;
+		z-index: 10;
+		position: absolute;
+		top: 12px;
+		right: 22px;
+		width: 30px;
+		height: 32px;
+		background: url(../images/icon_socialshare_icononly.png) no-repeat;
+//		background-size: cover;
+		font-size: 0;
+		cursor: pointer;
+		&:focus, &:hover {
+			background: url(../images/icon_socialshare_active.png);
+		}
+	}
+	// override share-icon position in detail view
+	&.detail-view span.share-icon {
+		right: 10px + $indentation;
+	}
+	//
+	// Social share icons Bubble
+	//
+	span.share-links {
+		position: absolute;
+		z-index: 20;
+		right: 5px;
+		top: 15px;
+		//
+		// close icon
+		//
+		span.close {
+			position: absolute;
+			top: 0px;
+			right: 5px;
+			color: #ccc;
+			cursor: pointer;
+			&:hover, &:focus {
+				color: white;
+			}
+			&:after {
+				content: "";
+				font-family: "FontAwesome";
+			}
+		}
+		ul {
+			margin: 0;
+			padding: 0;
+			@include box($gray-dark);
+			li {
+				list-style-type: none;
+				display: inline-block;
+				font-family: "Open Sans";
+				line-height: 15px;
+				padding: 0 10px;
+				a {
+					text-decoration: none;
+					color: #999;
+					@include single-transition( all, 0.3s );
+					&:hover, &:focus {
+						@include single-transition( all, 0.1s );
+						color: white;
+					}
+				}
+				a:before {
+					margin-right: 5px;
+					font-family: "FontAwesome";
+					font-size: px2em(30px);
+					position: relative;
+					top: 3px;
+				}
+			}
+			li.facebook a {
+				&:before {
+					content: "";
+				}
+			}
+			li.twitter a {
+				&:before {
+					content: "";
+				}
+			}
+			li.googleplus a {
+				padding-right: 5px;
+				&:before {
+					content: "";
+				}
+			}
+
+		}
+	}
+	//
+	// rate count
+	//
+	span.rate-count {
+		float: right;
+		margin-right: 20px;
+		&:before {
+			content: " ";
+			font-family: "FontAwesome";
+			color: $white-font;
+		}
+
+		//
+		// clean up messy rate-count stuff
+		//
+		* {
+			margin: 0;
+			padding: 0;
+			display: inline-block;
+		}
+		span.rate-button,
+		label { display: none; }
+		div.rate-info {
+			color: $white-font;
+			font-family: "Fjord One";
+			font-size: px2em(16px);
+
+
+		}
+	}
+	// override rate-icon position in detail view
+	&.detail-view span.rate-count {
+		margin-right: 21px;
+	}
+	//
+	// comment count
+	//
+	span.comment-count {
+		float: right;
+		margin-right: 40px;
+		color: $white-font;
+		&:before {
+			content: " ";
+			font-family: "FontAwesome";
+		}
+	}
+
+	//
+	// Category label
+	//
+	div.field-name-field-category {
+		@extend .category-label;
+		background: white;
+		a {
+			text-decoration: none;
+		}
+	}
+
+	//
+	// Bubble (with submitted info and Text )
+	//
+	div.bubble {
+		@include border-radius(3px);
+		position: relative;
+//		border: 2px dashed $white-font;
+		border: 2px dashed rgba(255,255,255,0.5);
+		padding: 15px;
+		margin-top: 20px;
+		margin-bottom: 15px;
+
+		//
+		// when more than one item in a row, apply min-height to the bubble
+		//
+		@media all and (min-width: 569px) {
+			min-height: 220px;
+		}
+
+		// submitted
+		div.submitted {
+			margin-bottom: 0.75em;
+
+			font-size: px2em(16px);
+			span.username,
+			a {
+				//font-weight: bold;
+				//font-style: italic;
+				color: $white-font;
+			}
+		}
+
+		//
+		// regular bubble text
+		//
+		p {
+			font-size: px2em(20px);
+		}
+		a {
+			color: $white-font;
+			&:hover, &:focus {
+				text-decoration: none;
+			}
+		}
+
+	}
+
+	//
+	// bubbles teaser view
+	//
+	div.bubble-teaser {
+		&:before {
+			content: url(../images/bubble-tinyhook-white50.png);
+			position: absolute;
+			right: 32px;
+			bottom: -35px;
+		}
+		//
+		// this tiny span covers the space between the "legs" of the bubble-hook, so the dashed line doesn't shine through
+		//
+		span.border-cover-snippet {
+			position: absolute;
+			width: 10px;
+			height: 10px;
+			right: 35px;
+			bottom: -5px;
+		}
+	}
+	//
+	// NOTE: Background color is defined by custom variables (theme-settings.php)
+	//
+	&.hotness-0   div.bubble-teaser span.border-cover-snippet,
+	&.hotness-20  div.bubble-teaser span.border-cover-snippet,
+	&.hotness-40  div.bubble-teaser span.border-cover-snippet,
+	&.hotness-60  div.bubble-teaser span.border-cover-snippet,
+	&.hotness-80  div.bubble-teaser span.border-cover-snippet,
+	&.hotness-100 div.bubble-teaser span.border-cover-snippet { @include single-transition( all, 0.5s ); }
+
+	//
+	// bubbles detail view
+	//
+	div.bubble-detail-view {
+		margin-left: $indentation;
+		border-width: 2px;
+		&:before {
+//			content: url(../images/bubble-tinyhook.png);
+			position: absolute;
+			left: -43px;
+			top: $bubble-hook-top;
+		}
+		//
+		// this tiny span covers the space between the "legs" of the bubble-hook, so the dashed line doesn't shine through
+		//
+		span.border-cover-snippet {
+			position: absolute;
+			width: 6px;
+			height: 22px;
+			left: -5px;
+			top: 27px;
+		}
+	}
+
+	&.hotness-0   div.bubble-detail-view:before,
+	&.hotness-20  div.bubble-detail-view:before,
+	&.hotness-40  div.bubble-detail-view:before,
+	&.hotness-60  div.bubble-detail-view:before,
+	&.hotness-80  div.bubble-detail-view:before,
+	&.hotness-100 div.bubble-detail-view:before { content: url(../images/bubble-left-bighook-heatmap.png); }
+
+	//
+	// Has been answered / Has not been answered
+	//
+	div.answered {
+		text-align: center;
+		div.municipal-response-short {
+			display: inline-block;
+			font-size: px2em(18px);
+		}
+		//
+		// question NOT (yet) answered!
+		//
+		div.negative {
+			opacity: 0.2;
+			&:before {
+				content: " ";
+				font-family: "FontAwesome";
+			}
+		}
+		//
+		// question answered!
+		//
+		div.positive {
+			position: relative;
+			&:before {
+				content: " ";
+				font-family: "FontAwesome";
+			}
+		}
+
+	}
+
+
+}
+
+
+//
+// Styles for Node detail view only ( Overlay ) ###############################################################################
+// Styles for Node detail view only ( Overlay ) ###############################################################################
+// Styles for Node detail view only ( Overlay ) ###############################################################################
+//
+
+
+body.node-type-proposal,
+div#overlay {
+
+	padding: 0;
+	margin-left: auto;
+	margin-right: auto;
+	margin-bottom: $vertical-margin;
+	@include box(white);
+	opacity: 0.95;
+
+	//
+	// titlebar + close button
+	//
+	div#overlay-titlebar {
+		//
+		// title
+		//
+		div#overlay-title-wrapper {
+			display: none;
+		}
+		//
+		// close button
+		//
+		div#overlay-close-wrapper {
+			a {
+				position: absolute;
+				right: 0px;
+				top: 0px;
+				background: transparent;
+				text-decoration: none;
+				color: $gray-font;
+				@include single-transition( all, 0.3s );
+
+				&:after {
+					content: "";
+					font-family: "FontAwesome";
+					font-size: 32px;
+				}
+
+				&:hover, &:focus {
+					color: $black-font;
+					@include single-transition( all, 0.3s );
+				}
+			}
+		}
+	}
+
+	// social share icons OVERRDIDES for detail page
+	div.hover-box-css {
+		right: 15px;
+		div.content-container {
+			padding-right: 25px;
+			li a {
+				background: $black-font;
+				color: $gray-font;
+				&:hover, &:focus {
+					color: $white-font;
+				}
+			}
+		}
+	}
+
+	//
+	// Question
+	//
+	div.heatmap.detail-view {
+		margin-right: $indentation;
+
+		div.field-name-field-category {
+			margin-left: $indentation;
+		}
+
+
+		span.rate-count {
+
+			&:before {
+				content: none;
+			}
+
+			//
+			// Rating
+			//
+			div.rate-widget {
+				position: relative;
+
+				// override /sites/all/modules/contrib/rate/templates/thumbs-up/thumbs-up.css
+				span.rate-thumbs-up-btn-up,
+				a.rate-thumbs-up-btn-up {
+					float: left;
+					position: relative;
+					display: inline-block;
+					height: 0;
+					width: 0;
+					background: none;
+					text-indent: 0;
+					font-size: 0px;
+					color: white;
+					text-decoration: none;
+
+					&:hover, &:focus {
+						color: black;
+					}
+
+					&:after {
+						content: "";
+						font-family: "FontAwesome";
+						position: absolute;
+						left: -24px;
+						top: 0px;
+						font-size: 20px;
+
+					}
+				}
+				// Overrides for NON-CLICKABLE thumbs up icon of GUESTS!
+				span.rate-thumbs-up-btn-up {
+					&:hover, &:focus {
+						color: inherit;
+					}
+					&:after {
+						opacity: 0.4;
+					}
+				}
+			}
+
+
+		}
+
+		span.comment-count {
+			&:hover, &:focus {
+				color: black;
+			}
+		}
+
+	}
+
+	//
+	// Response
+	//
+	div.response-bubble-container {
+		@include box($response-blue);
+		color: white;
+		margin-left: $indentation;
+
+
+		span.border-cover-snippet {
+			position: absolute;
+			width: 7px;
+			height: 22px;
+			right: -4px;
+			top: 27px;
+		}
+
+		//
+		// Answered/not answered flag
+		//
+		div.answered {
+			text-align: right;
+			margin-right: $indentation;
+			font-size: px2em(20px);
+		}
+
+		//
+		// bubbles detail view
+		//
+		div.response-bubble {
+
+			@extend .clearfix;
+
+
+			@include border-radius(3px);
+			position: relative;
+			border: 2px dashed #afcad8;
+			padding: 15px;
+			margin-top: 20px;
+			margin-bottom: 15px;
+			margin-right: $indentation;
+			border-width: 2px;
+
+			&:before {
+				content: url(../images/bubble-right-bighook-answer.png);
+				position: absolute;
+				right: -43px;
+				top: $bubble-hook-top;
+			}
+
+
+			//
+			// image
+			//
+			div.field-name-field-municipal-response-image {
+				float: right;
+				img {
+					max-width: 100%;
+					margin-bottom: 10px;
+				}
+			}
+
+			//
+			// regular response text
+			//
+			div.field-name-field-municipal-response {
+				p {
+					font-size: px2em(20px);
+					margin-right: 15px;
+				}
+				a {
+					color: $white-font;
+					&:hover, &:focus {
+						text-decoration: none;
+					}
+				}
+
+			}
+
+		}
+
+
+	}
+
+
+	//
+	// Comments
+	//
+	section#comments {
+
+
+		//
+		// Comment Form
+		//
+		form#comment-form {
+
+			//
+			// bubble
+			//
+			div#edit-comment-body {
+
+				div.form-item {
+					margin: 0;
+				}
+
+				div.text-format-wrapper {
+					position: relative;
+					@include box( #ddd );
+					border: 2px dashed #bbb;
+
+					&:before {
+						content: url(../images/bubble-tinyhook-comment.png);
+						position: absolute;
+						right: 38px;
+						bottom: -35px;
+					}
+					// title label
+					label {
+						display: none;
+					}
+					// actual textarea
+					textarea {
+						height: 130px;
+						background: transparent;
+//						color: $white-font;
+//						border: 3px dashed #80a2b2;
+						border: none;
+//						padding: 15px;
+						font-size: px2em(20px);
+
+					}
+					div.grippie {
+						display: none;
+					}
+					// format chooser
+					fieldset.filter-wrapper {
+						display: none;
+					}
+
+				}
+			}
+
+
+			//
+			// button
+			//
+			div#edit-actions {
+				text-align: center;
+				padding-bottom: 20px;
+
+				// huge button style
+				input#edit-submit {
+					//@include button-submit-huge( $highlight, "../images/arrow-right-red.svg", #666 );
+					@include button-submit-huge( $highlight, transparent, white, $gray-dark );
+				}
+
+			}
+
+		}
+
+		h2.comments__title {
+			margin-bottom: 20px !important;
+		}
+
+		//
+		// Actual comments
+		//
+		article {
+
+			@media all and (min-width: 960px) {
+				&.odd {
+				float: left;
+					width: 48%;
+					margin-right: 4%;
+				}
+				&.even {
+					float: left;
+					width: 48%;
+				}
+			}
+
+			div.comment-bubble {
+
+				position: relative;
+				@include box( #ddd );
+				border: 2px dashed #bbb;
+
+				&:before {
+					content: url(../images/bubble-tinyhook-comment.png);
+					position: absolute;
+					right: 38px;
+					bottom: -35px;
+				}
+
+				//
+				// comments header
+				//
+				header {
+					p.submitted {
+//						margin: 0 0 0.5em;
+					}
+				}
+
+				span.rdf-meta {
+					display: none;
+				}
+
+				//
+				// actual comment text
+				//
+				div.field-name-comment-body {
+
+					p {
+						margin-top: 0;
+						font-size: px2em(20px);
+					}
+				}
+
+			}
+
+
+		}
+
+	}
+
+}
+
+// Hide header (nav + logo), when embedded in page (in overlay mode)
+div#overlay-content header#header {
+	display: none !important;
+}
+
+div#overlay {
+	margin-top: $vertical-margin;
+}
+
+body.node-type-proposal header#header {
+	margin-top: -15px;
+	margin-left: $zen-gutter-width / 2;
+	margin-right: $zen-gutter-width / 2;
+}
+
+div#overlay-container body {
+	padding-top: $vertical-margin;
+}
+
+body.node-type-proposal {
+	background: $gray-background;
+}
+

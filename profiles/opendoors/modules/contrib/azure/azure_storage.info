@@ -1,0 +1,18 @@
+name = Windows Azure Storage
+description = Handles storage of files on Windows Azure Blob Storage.
+core = 7.x
+
+dependencies[] = ctools
+
+; Stream wrapper implementation.
+files[] = azure_storage.streamwrappers.inc
+
+; Tests.
+files[] = tests/azure_storage.lowlevel.test
+
+; Information added by drupal.org packaging script on 2013-09-30
+version = "7.x-1.0-beta1+3-dev"
+core = "7.x"
+project = "azure"
+datestamp = "1380555065"
+

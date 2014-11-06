@@ -1,0 +1,544 @@
+<?php
+
+/**
+ * This module calculates some statistics for the site and displays them in
+ * a block. The statistics are regularly calculated on a cron run.
+ *
+ * Additionally, a block is provided that renders the piwik tracking tag.
+ */
+
+/**
+ * Implements hook_menu().
+ * Show the stats block configuration page.
+ * @link http://api.drupal.org/api/drupal/modules!system!system.api.php/function/hook_menu/7 web page explaining it further. @endlink
+ *
+ * @return array
+ */
+function stats_block_menu() {
+  $items = array();
+
+  $items['admin/config/stats_block'] = array(
+    'title' => t('Statistics block'),
+    'description' => t('Settings for the statistics block'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('stats_block_settings'),
+    'access arguments' => array('configure stats block'),
+    'file' => 'stats_block.admin.inc',
+    'file path' => drupal_get_path('module', 'stats_block'),
+    'type' => MENU_NORMAL_ITEM
+  );
+
+  return $items;
+}
+
+
+/**
+ * Implements hook_permission().
+ *
+ * Valid permissions for this module.
+ *
+ * @return array
+ *   An array of valid permissions for the onthisdate module
+ */
+function stats_block_permission() {
+  $warning = t('Warning: Give to trusted roles only; this permission has privacy implications.');
+  return array(
+    'configure stats block' => array(
+      'title' => t('Configure stats block'),
+      'description' => t('Set piwik connection and choose metrics to be displayed.') . ' <em>' . $warning . '</em>',
+    ),
+    'view stats block' => array(
+      'title' => t('View stats block'),
+      'description' => t('View chosen metrics from the site and from the piwik server in the statistics block.'),
+    ),
+  );
+}
+
+
+/**
+ * Implements hook_block_info().
+ * @link http://api.drupal.org/api/drupal/modules%21block%21block.api.php/function/hook_block_info/7 web page explaining it further. @endlink
+ */
+function stats_block_block_info() {
+
+  $blocks[0] = array(
+    'info' => t('Statistics block'),
+  );
+
+  $blocks[1] = array(
+    'info' => t('Piwik tracking tag'),
+  );
+
+  $blocks[2] = array(
+    'info' => t('Piwik opt-out'),
+  );
+
+  return $blocks;
+}
+
+
+/**
+ * Implements hook_block_configure().
+ */
+function stats_block_block_configure($delta) {
+
+  if ($delta == 2) {
+    return stats_block_optout_form();
+  }
+}
+
+
+/**
+ * Implements hook_block_save().
+ */
+function stats_block_block_save($delta = '', $edit = array()) {
+  if ($delta == 2) {
+    $variables = array('optout_width', 'optout_height', 'optout_url');
+    foreach($variables as $variable) {
+      variable_set('stats_block_' . $variable, $edit[$variable]);
+    }
+  }
+}
+
+
+/**
+ * Returns a form array for optout block settings
+ *
+ * @return array
+ */
+function stats_block_optout_form() {
+
+  $settings = _stats_block_get_settings();
+  $form['optout_width'] = array(
+    '#type' => 'textfield',
+    '#title' => t('IFrame width'),
+    '#size' => 10,
+    '#description' => t('Width of the iframe in the Piwik opt-out block. Include scale like "200px".'),
+    '#default_value' => $settings['optout_width'],
+  );
+  $form['optout_height'] = array(
+    '#type' => 'textfield',
+    '#title' => t('IFrame height'),
+    '#size' => 10,
+    '#description' => t('Height of the iframe in the Piwik opt-out block. Include scale like "550px".'),
+    '#default_value' => $settings['optout_height'],
+  );
+  $form['optout_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('IFrame URL'),
+    '#size' => 120,
+    '#description' => t('URL of the content the iframe should load. Include all Piwik parameters like action or language.'),
+    '#default_value' => $settings['optout_url'],
+  );
+
+  return $form;
+}
+
+
+/**
+ * Implements hook_block_view().
+ * @see http://api.drupal.org/api/drupal/modules%21block%21block.api.php/function/hook_block_view/7
+ */
+function stats_block_block_view($delta = '') {
+  $block = array();
+
+  switch ($delta) {
+    case 0:
+      if (user_access('view stats block')) {
+        $metrics = _stats_block_calculate_metrics();
+        $content = theme('stats_block', $metrics);
+        $block = array('subject' => t('Statistics'), 'content' => $content);
+      }
+      break;
+    case 1:
+      $settings = _stats_block_get_settings();
+      // Hide piwik tracking on development sites.
+      $hostname = $_SERVER['HTTP_HOST'];
+      if (!strstr($hostname, '.dev.zebralog.net') && !strstr($hostname, '.local')) {
+        $content = _stats_block_get_tracking_tag($settings['base_url'], $settings['id_site']);
+      }
+      else {
+        $content = '<!-- No piwik tracking on dev sites -->';
+      }
+      $block = array('subject' => '<none>', 'content' => $content, 'subject' => 'Piwik tracking');
+      break;
+    case 2:
+      $settings = _stats_block_get_settings();
+      $content = '<iframe frameborder="no" scrolling="no" ';
+      $content .= 'width="' . $settings['optout_width'] . '" ';
+      $content .= 'height="' . $settings['optout_height'] . '" ';
+      $content .= 'src="' . $settings['optout_url'] . '"></iframe>';
+      $block = array('subject' => '', 'content' => $content);
+      break;
+  }
+  return $block;
+}
+
+
+/**
+ * Implementation of hook_theme().
+ * Register this module's (or theme's) theme implementations.
+ */
+function stats_block_theme() {
+  return array(
+    // name of the themable item
+    'stats_block' => array(
+      // arguments of the theme function (key = argument name, value = default value)
+      'arguments' => array('metrics' => array()),
+    ),
+  );
+}
+
+
+/**
+ * Calculates statistical metrics about the site. And returns them in an array.
+ *
+ * @return array
+ */
+function _stats_block_calculate_metrics() {
+  $statistics = variable_get('stats_block_statistics', array());
+  $show_metrics = variable_get('stats_block_show_metrics', array());
+
+  foreach ($statistics as $key => $val) {
+    if (!isset($show_metrics[$key]) || !$show_metrics[$key] || !$val['value']) {
+      unset($statistics[$key]);
+      continue;
+    }
+
+    // Default description, of none is given
+    if (!isset($val['description'])) {
+      $statistics[$key]['description'] = '';
+    }
+
+    // Default string substitutions for translation, of none is given
+    if (!isset($val['substitutions'])) {
+      $statistics[$key]['substitutions'] = array();
+    }
+  }
+  uasort($statistics, 'stats_block_sort_value');
+
+  return $statistics;
+}
+
+
+/**
+ * Default statistics metrics.
+ *
+ * Implements hook_stats_block_metrics().
+ *
+ * @return array
+ */
+function stats_block_stats_block_metrics() {
+
+  $metrics = array();
+
+  $metrics['piwik_actions'] = array(
+    'label' => 'Site actions',
+    'piwik-query' => 'VisitsSummary.getActions',
+    'description' => 'Total count of page views, downloads and clicks on outlinks.',
+  );
+
+  $metrics['piwik_visits'] = array(
+    'label' => 'Visits',
+    'piwik-query' => 'VisitsSummary.getVisits',
+    'description' => 'Count of user visits, except visits from Zebralog GmbH & Co. KG.',
+  );
+
+  $metrics['piwik_unique_visitors'] = array(
+    'label' => 'Unique visitors',
+    'piwik-query' => 'VisitsSummary.getUniqueVisitors',
+    'description' => 'Count of unique visitors, except visitors from Zebralog GmbH & Co. KG.',
+  );
+
+  $query = "SELECT n.type, COUNT( n.nid ) AS Anzahl
+    FROM {node} n
+    WHERE n.status = 1
+    GROUP BY n.type
+    ORDER BY Anzahl DESC;";
+  $results = db_query($query);
+
+  // Continue building metrics array
+  $sum = 0;
+  // Number of comments on each survey
+  foreach ($results as $result) {
+    $type = node_type_get_name($result->type);
+    $metrics[$result->type . '-nodes'] = array(
+      'label' => '@type nodes',
+      'value' => $result->Anzahl,
+      'description' => 'Count of all published nodes of type @type',
+      'substitutions' => array('@type' => $type),
+    );
+    $sum += $result->Anzahl;
+  }
+
+  // Total number of comments on all surveys
+  $metrics['nodes'] = array(
+    'label' => 'Nodes',
+    'value' => $sum,
+    'description' => 'Total number of all published nodes',
+    'substitutions' => array(),
+  );
+  watchdog('Statistics', '@count nodes', array('@count' => $sum), WATCHDOG_NOTICE, NULL);
+
+  // Number of published comments
+  $value = db_select('comment', 'c')
+      ->fields('c')
+      ->condition('status', 1)
+      ->execute()
+      ->rowCount();
+
+  $metrics['published_comments'] = array(
+    'label' => 'Published comments',
+    'value' => $value,
+    'description' => 'Total count of published comments on postings of any type.'
+  );
+  watchdog('Statistics', '@count comments (@published published)', array('@count' => $value, '@published' => $value), WATCHDOG_NOTICE, NULL);
+
+  // Number of published users including guest user 0.
+  $value = db_select('users', 'u')
+      ->fields('u')
+      ->condition('status', 1)
+      ->condition('uid', 0, '>')
+      ->execute()
+      ->rowCount();
+
+  $metrics['registered_users'] = array(
+    'label' => 'Registered users',
+    'value' => $value,
+    'description' => 'Total count of all registered users, which have not been blocked. Also adminsitrators, moderators and some test accounts may be included.'
+  );
+  watchdog('Statistics', '@count registered users', array('@count' => $value), WATCHDOG_NOTICE, NULL);
+
+  // Number of registered unblocked users that have no special roles
+  $query = "SELECT COUNT(uid) AS count FROM {users} u "
+        . "WHERE u.uid <> 0 "
+        . "AND u.status = 1 "
+        . "AND u.uid NOT IN (SELECT DISTINCT uid FROM users_roles)";
+  $result = db_query($query)->fetchField();
+
+  $metrics['users_without_roles'] = array(
+    'label' => 'Registered users without roles',
+    'value' => $result,
+    'description' => 'Number of registered users that have no special roles like administration or moderation and have not been blocked.',
+  );
+  watchdog('Statistics', '@count registered unblocked users that have no special roles.', array('@count' => $result), WATCHDOG_NOTICE, NULL);
+
+  return $metrics;
+}
+
+
+/**
+ * Implements hook_cron().
+ *
+ * Calculate the statistics.
+ */
+function stats_block_cron() {
+  // Get all data any module provide
+  $results = module_invoke_all('stats_block_metrics');
+
+  // Get conditions which metrics should be shown
+  $show_metrics = variable_get('stats_block_show_metrics');
+
+  // Extract the piwik array and calculate
+  foreach ($results as $key => $val) {
+
+    // Jump to next one if the current metric is not configured to be displayed
+    if (!isset($show_metrics[$key]) || !$show_metrics[$key]) {
+      continue;
+    }
+
+    if (isset($val['piwik-query'])) {
+      $piwik_result = _stats_block_query_piwik($val['piwik-query']);
+      if (is_array($piwik_result)) {
+        $sum = 0;
+        foreach ($piwik_result as $year => $value) {
+          $sum = $sum + (int) $value;
+        }
+        $results[$key]['value'] = $sum;
+      }
+      else if (is_numeric($piwik_result)) {
+        $results[$key]['value'] = $piwik_result;
+      }
+      else {
+        unset($results[$key]);
+        watchdog('Statistics', 'Piwik value for @label could not be counted from results and will not be shown in statistics.', array('@label' => $val['label']), WATCHDOG_NOTICE, NULL);
+      }
+    }
+    // Default description, of none is given
+    if (!isset($val['description'])) {
+      $results[$key]['description'] = '';
+    }
+
+    // Default string substitutions for translation, of none is given
+    if (!isset($val['substitutions'])) {
+      $results[$key]['substitutions'] = array();
+    }
+  }
+
+  variable_del('stats_block_statistics');
+  variable_set('stats_block_statistics', $results);
+}
+
+
+/**
+ * Implements theme_stats_block();
+ *
+ * Themes the statistics block.
+ *
+ * Note: The CSS class "statisticsRow" is deprecated.
+ * Use the CSS class "statistics-row" instead.
+ *
+ * @param $metrics
+ *   Array of statistical metrics about the site usage of the form:
+ *     array('parameter_machine_readable_name' => array(
+ *       'label' => 'Parameter name in plural form'.
+ *       'value' => 10000,
+ *       'description' => 'This is just a fixed showcase value',
+ *     ));
+ * @return string of themed HTML.
+ */
+function theme_stats_block($metrics) {
+  $output = '';
+
+  foreach ($metrics as $key => $val) {
+    if (!isset($val['description'])) {
+      continue;
+    }
+    $output .= '<div class="statistics-row statisticsRow stats-' . $key . '" title="' . t($val['description'], $val['substitutions']) . '">';
+    $output .= '<span class="label">' . t($val['label'], $val['substitutions']) . '</span>';
+    $output .= '<span class="value">' . number_format($val['value'], 0, ',', '.') . '</span>';
+    $output .= '</div>';
+  }
+
+  $last_cron = variable_get('cron_last', 0);
+  $time = format_date($last_cron, 'custom', 'H:i');
+  $date = format_date($last_cron, 'long');
+  $output .= '<div class="last-cron-run" title="' . $date . '">';
+  $output .= t('Latest update:') . ' ' . $time . '</div>';
+
+  return $output;
+}
+
+
+/**
+ * Returns the piwik tracking tag for this site.
+ *
+ * @param string $base_url    The base URL of the piwik tracker
+ * @param int $site_id      The piwik site ID of this site
+ */
+function _stats_block_get_tracking_tag($base_url, $site_id) {
+  // Strip http:// prefix from base url
+  $addr = str_replace('http://', '', $base_url);
+  $addr = str_ireplace('https://', '', $addr);
+
+  $tag = '<!-- Piwik -->
+  <script type="text/javascript">
+  var pkBaseURL = (("https:" == document.location.protocol) ? "https://' . $addr . '" : "http://' . $addr . '");
+  document.write(unescape("%3Cscript src=\'" + pkBaseURL + "piwik.js\' type=\'text/javascript\'%3E%3C/script%3E"));
+  </script><script type="text/javascript">
+  try {
+    var piwikTracker = Piwik.getTracker(pkBaseURL + "piwik.php", ' . $site_id . ');
+    piwikTracker.trackPageView();
+    piwikTracker.enableLinkTracking();
+  }
+  catch(err) {}
+  </script><noscript><p><img src="http://' . $addr . '/piwik.php?idsite=' . $site_id . '" style="border:0" alt="" /></p></noscript>
+  <!-- End Piwik Tag -->';
+
+  return $tag;
+}
+
+
+/**
+ * Query the latest statistics from piwik.
+ *
+ * @param string $method    The method used
+ * @return an unserialized value
+ */
+function _stats_block_query_piwik($method = 'VisitsSummary.getVisits') {
+  $piwik_settings = _stats_block_get_settings();
+
+  $start_date = $piwik_settings['project_start_date'];
+  $start_date = $start_date['year'] . '-' . $start_date['month'] . '-' . $start_date['day'];
+  $now_date = date('Y-m-d', time());
+
+  // One step data pull for time period range
+  $piwik_base_request =
+      $piwik_settings['base_url'] . '?' .
+      'module=API&method=' . $method .
+      '&idSite=' . $piwik_settings['id_site'] .
+      '&format=PHP' .
+      '&token_auth=' . $piwik_settings['api_key'];
+  $piwik_url = $piwik_base_request .
+      '&period=range'.
+      '&date=' . $start_date . ',' . $now_date;
+
+  $result_past = file_get_contents($piwik_url);
+
+  if (!$result_past) {
+    // Fetching the piwik statistics failed
+    $message = t('Unable to contact the piwik server. Please check your <a href="!url">Statistics block settings</a>.', array('!url' => url('admin/config/stats_block/settings')));
+    drupal_set_message($message, 'error');
+  }
+  $result = unserialize($result_past);
+
+  if ($result['result'] == 'error') {
+    $message = t('Piwik did not understand our request. Error returned: "!piwik_message"', array('!piwik_message' => $result['message']));
+    drupal_set_message($message, 'error');
+  }
+
+  return $result;
+}
+
+
+/**
+ * Return current settings. If no settings were made, the default settings are returned.
+ * @return array
+ */
+function _stats_block_get_settings() {
+  $default_date = getdate();
+  $default_date['day'] = $default_date['mday'];
+  $default_date['month'] = $default_date['mon'];
+
+  $defaults = array(
+    'base_url' => 'http://myserver.com/piwik/index.php',
+    'id_site' => 1,
+    'api_key' => '',
+    'project_start_date' => $default_date, // Somewhere in the past; latest the day when the project started
+    'profile' => 'guetersloh',       // Profile which determines which metrics are calculated
+    'optout_width' => '200px',
+    'optout_height' => '550px',
+    'optout_url' => 'https://stats.zebralog.de/index.php?module=CoreAdminHome&amp;action=optOut',
+  );
+
+  static $piwik_settings;
+  if (isset($piwik_settings)) {
+    return $piwik_settings;
+  }
+
+  $piwik_settings = array();
+  foreach ($defaults as $key => $val) {
+    $piwik_settings[$key] = variable_get('stats_block_' . $key, $val);
+  }
+
+  return $piwik_settings;
+}
+
+
+/**
+ * Sort function to order the statistics descending by their value
+ *
+ * @see https://api.drupal.org/api/drupal/includes%21common.inc/function/drupal_sort_weight/7
+ *
+ * @param type $a
+ * @param type $b
+ * @return int
+ */
+function stats_block_sort_value($a, $b) {
+  $a_weight = (is_array($a) && isset($a['value'])) ? $a['value'] : 0;
+  $b_weight = (is_array($b) && isset($b['value'])) ? $b['value'] : 0;
+  if ($a_weight == $b_weight) {
+    return 0;
+  }
+  return ($a_weight > $b_weight) ? -1 : 1;
+}

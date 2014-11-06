@@ -1,0 +1,32 @@
+<?php
+/**
+ * @file
+ * Install functions for the overlay paths example module.
+ */
+
+/**
+ * Implements hook_update_N().
+ */
+function overlay_paths_example_update_7000() {
+  // We 'renamed' ourselves to overlay_admin_ui module.
+
+  $defaults = array(
+    'node/add' => array(
+      'width' => '600px',
+    ),
+    'user/register' => TRUE,
+    'user/register/*' => TRUE,
+    'user/register/step/2' => FALSE
+  );
+
+  // Copy the settings over.
+  variable_set('overlay_paths_ui_paths', variable_get('overlay_paths_example_paths', $defaults));
+
+  // Enable the new module.
+  module_enable(array('overlay_paths_ui'));
+
+  // Disable the old one.
+  module_disable(array('overlay_paths_example'));
+
+
+}

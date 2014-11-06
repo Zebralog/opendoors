@@ -1,0 +1,630 @@
+<?php
+/**
+ * @file
+ * Code for the opendoors_discussion feature.
+ */
+
+include_once 'opendoors_discussion.features.inc';
+
+
+/**
+ * Permissions for this module: <em>vote on proposals</em>
+ * 
+ * Implements hook_permission().
+ */
+function opendoors_discussion_permission() {
+  return array(
+    'vote on proposals' => array(
+      'title' => t('Vote on proposals'),
+      'description' => t('Use the rate widget to vote on people\'s proposals'),
+    ),
+  );
+}
+
+
+/**
+ * Implements hook_theme().
+ */
+function opendoors_discussion_theme() {
+  return array(
+    'municipal_response_short' => array(
+      'variables' => array('content' => NULL),
+    ),
+    'radio_with_description' => array(
+      'render element' => 'element',
+    ),
+  );
+}
+
+/**
+ * Modify proposal and comment forms.
+ *
+ * Proposals
+ * - Set proposal form heading
+ * - Show category explanation behind selection widget
+ * - Redirect to front page after submission
+ * 
+ * Comments
+ * - hide anonymous author name
+ * - hide filter tips
+ * 
+ * Implements hook_form_alter().
+ */
+function opendoors_discussion_form_alter(&$form, &$form_state, $form_id) {
+  global $user;
+  if ($form_id == 'proposal_node_form') {
+    // Set another form heading
+    $form['form_title']['#markup'] = 
+      '<h2 class="pane-title">' . t('Ask your question') . '</h2>' .
+      '<div class="title-sub-heading">' . t('We\'d like to hear what you think. Please let us know and we will answer. Your question is going to be discussed by the community.') . '</div>';
+    $form['form_title']['#weight'] = $form['body']['#weight'] - 5;
+    
+    // A little re-labelling
+    $form['actions']['submit']['#value'] = t('Submit your question now');
+    
+    if (isset($form['field_category'][LANGUAGE_NONE]['#options']['_none'])) {
+      unset($form['field_category'][LANGUAGE_NONE]['#options']['_none']);
+    }
+    
+    // Render category descriptions into radio button labels.
+    //
+    // We want to have the taxonomy terms explained, and we do this by rendering
+    // the terms' descriptions into the radios button labels.
+    if (!isset($form['field_category'][LANGUAGE_NONE]['#pre_render'])) {
+      $form['field_category'][LANGUAGE_NONE]['#pre_render'] = array('form_pre_render_conditional_form_element');
+    }
+    $form['field_category'][LANGUAGE_NONE]['#pre_render'][] = '_opendoors_discussion_prerender_radios';
+    $form['field_category'][LANGUAGE_NONE]['#pre_render'][] = '_opendoors_discussion_prerender_addjs';
+        
+    // Redirect to front page after form submission
+    if (drupal_is_front_page() || arg(0) == 'browse-proposals') {
+      $form['actions']['submit']['#submit'][] = '_opendoors_discussion_redirect_to_discussion';
+    }
+    
+    // Announce translatable string (later used in JS)
+    t('Please select your category');
+  }
+  else if ($form_id == 'comment_node_proposal_form') {
+    if ($user->uid == 0) {
+      $form['author']['name']['#access'] = FALSE;
+    }
+    $form['comment_body']['#after_build'][] = '_opendoors_discussion_hide_comment_filter_tips';
+  }
+  // Proposal filter form
+  else if ($form_id == 'views_exposed_form' && $form['#id'] == 'views-exposed-form-proposal-discussion-page') {
+    // Always submit to current page
+    $form['#action'] = url(current_path());
+    
+    // Hide sort widgets because better_exposed_filters can hide only filter widgets
+    $form['sort_by']['#title'] = '';
+    $form['sort_by']['#attributes'] = array('class' => array('element-hidden'));
+    $form['sort_order']['#title'] = '';
+    $form['sort_order']['#attributes'] = array('class' => array('element-hidden'));
+    
+    $form['keys']['#attributes']['placeholder'] = t('Search keyword');
+    $form['submit']['#value'] = t('Search');
+  }
+}
+
+/**
+ * Add pseudo fields to proposal node.
+ * - field municipal_response_short which displays if a proposal node has an answer or not.
+ *   This field is displayed in a node's teaser view only.
+ * - field share_links (links for sharing in social networks)
+ * 
+ * Implements hook_node_view().
+ */
+function opendoors_discussion_node_view($node, $view_mode, $langcode) {
+  if ($node->type == 'proposal') {
+    if (empty($node->field_municipal_response)) {
+      $municipal_response_short = t('Has not been answered.');
+    }
+    else {
+      $municipal_response_short = t('Has been answered.');
+    }
+    $markup = theme('municipal_response_short', array(
+      'text' => $municipal_response_short,
+      'original_response' => $node->field_municipal_response,
+      'classes' => empty($node->field_municipal_response) ? 'negative' : 'positive',
+    ));
+    $node->content['municipal_response_short'] = array(
+      '#markup' => $markup,
+      '#weight' => 10,
+    );
+    
+    $node_url = url('node/' . $node->nid, array('absolute' => true));
+    $twitter_msg = t('I just found OpenDoors at !url', array('!url' => $node_url));
+    $share_links = array(
+        array('label' => 'Facebook', 'css_class' => 'facebook', 'url' => 'http://www.facebook.com/sharer/sharer.php?u=' . $node_url),
+        array('label' => 'Twitter', 'css_class' => 'twitter', 'url' => 'http://twitter.com/home?status=' . urlencode($twitter_msg)),
+        array('label' => 'Google+', 'css_class' => 'googleplus', 'url' => 'https://plus.google.com/share?url=' . $node_url),
+    );
+    $share_markup = '<ul>';
+    foreach($share_links as $link) {
+      $class = $link['css_class'];
+      $share_markup .= "<li class='$class'>" . l($link['label'], $link['url'], array('attributes' => array('target' => '_blank'))) . '</li>';
+    }
+    $share_markup .= '</ul>';
+    $node->content['share_links'] = array(
+      '#markup' => $share_markup,
+      '#weight' => 0,
+    );
+  }
+}
+
+/**
+ * Provide blocks for this feature
+ * - proposal filter links
+ * - proposal node add form
+ * 
+ * Implements hook_block_info()
+ */
+function opendoors_discussion_block_info() {
+  // This example comes from node.module.
+  $blocks['proposal_discussion_filter_links'] = array(
+    'info' => t('Filter proposals'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  
+  // We need this block because we want to embed this form in panels as a block
+  // (without using panel contexts).
+  // Using a "node form" panel context leads to cascaded form elements which is illegal in html.
+  $blocks['proposal_add_form'] = array(
+    'info' => t('Node add form for Proposals'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+
+  return $blocks;
+}
+
+/**
+ * Provide blocks (see opendoors_discussion_block_info()).
+ * 
+ * Implements hook_block_view()
+ */
+function opendoors_discussion_block_view($delta = '') {
+  $block = array();
+
+  switch ($delta) {
+    case 'proposal_discussion_filter_links':
+      
+      $path = current_path();
+      
+      $links = array();
+      $links['all'] = array(
+          'title' => t('All'),
+          'path' => $path,
+          'query' => array(),
+          'can_contain_query' => array('field_category_tid' => 1),
+          'fragment' => 'pane-proposal-discussion-intro'
+      );
+      $links['featured'] = array(
+          'title' => t('Recommended'),
+          'path' => $path,
+          'query' => array('field_recommended_value' => '1', 'sort_by' => 'changed', 'sort_order' => 'DESC'),
+          'fragment' => 'pane-proposal-discussion-intro'
+      );
+      $links['hot'] = array(
+          'title' => t('Hot'),
+          'path' => $path,
+          'query' => array('sort_by' => 'field_hotness_value', 'sort_order' => 'DESC'),
+          'fragment' => 'pane-proposal-discussion-intro'
+      );
+      
+      global $user;
+      if ($user->uid != 0) {
+        $links['mine'] = array(
+            'title' => t('Mine'),
+            'path' => $path,
+            'query' => array('uid_current' => '1'),
+            'fragment' => 'pane-proposal-discussion-intro'
+        );
+      }
+    
+      // Main filter links
+      $primary_filters = '<ul class="primary-filters">';
+      $secondary_filter = '';
+      foreach($links as $key => $link) {
+        // Which query is currently active?
+        $link_is_active = false;
+        if (_opendoors_discussion_is_active_query($link['query'])) {
+          $link_is_active = TRUE;
+        }
+        else if ( isset($link['can_contain_query']) && _opendoors_discussion_is_active_query($link['can_contain_query']) ) {
+          $link_is_active = TRUE;
+        }
+        $active_class = $link_is_active ? 'query-active' : '';
+        
+        if ($key == 'all' && $link_is_active) {
+          $secondary_filter = _opendoors_discussion_get_category_filter();
+        }
+        else if ($key == 'hot' && $link_is_active) {
+          $secondary_filter = _opendoors_discussion_get_heatmap_legend();
+        }
+        
+        $link_rendered = l(
+          $link['title'], 
+          $link['path'], 
+          array('query' => $link['query'], 'fragment' => $link['fragment']));
+        $primary_filters .= '<li class="filter-' . "$key $active_class" . '">' . $link_rendered . '</li>';
+      }
+      
+      // Add search icon
+      $active_class = '';
+      if ( _opendoors_discussion_is_active_query(array('keys' => '%')) ) {
+        $active_class = 'query-active';
+      }
+      $search_link = "<li class='filter-search $active_class'><span title='" . t('Search in proposals') . "'></span></li>";
+      $primary_filters .= $search_link;
+      
+      $primary_filters .= '</ul>';
+      
+      // Search form
+      $search_block = module_invoke('views', 'block_view', '-exp-proposal_discussion-page');
+      $search_filter = render($search_block['content']);
+      
+      $block['subject'] = '';
+      $block['content'] = $primary_filters . $search_filter . $secondary_filter;
+      break;
+      
+    case 'proposal_add_form':
+      $block['subject'] = '';
+      
+      if (user_access('create proposal content')) {
+        global $user;
+        $type = 'proposal';
+        module_load_include('inc', 'node', 'node.pages');
+        $node = (object) array(
+            'uid' => $user->uid, 
+            'name' => (isset($user->name) ? $user->name : ''), 
+            'type' => $type, 
+            'language' => LANGUAGE_NONE);
+        $form = drupal_get_form($type.'_node_form',$node);
+        $block['content'] = drupal_render($form);
+      }
+      else {
+        $block['content'] = '';
+      }
+      break;
+  }
+  return $block;
+}
+
+/**
+ * Make widget respect <em>vote on proposals</em> permission. Also: relabel 
+ * widget in order to avoid ambigous translations.
+ * 
+ * Implements hook_rate_templates().
+ */
+function opendoors_discussion_rate_widget_alter(&$widget, $context) {
+  if ($widget->name == 'vote_on_proposals') {
+    if (is_string($widget->options[0][1]) && !isset($widget->opendoors_label_changed)) {
+      $widget->options[0][1] = t('Vote ' . $widget->options[0][1]);
+      $widget->opendoors_label_changed = TRUE;
+      
+      // Check permissions
+      if (!user_access('vote on proposals')) {
+        // Disallow voting
+        $widget->mode = RATE_NOPERM_SHOW_DISABLED_WIDGET;
+        
+//        // Enable redirect on voting if a user can vote by logging in.
+//        // - Only show an active widget if the current user has a vote permission.
+//        // - Allow login redirect if the user could vote when logging in.
+//        $citizen_role = user_role_load_by_name('Citizen');
+//        $citizen_perms = user_role_permissions(array($citizen_role->rid => $citizen_role->name));
+//        if ( !array_key_exists('vote on proposals', $citizen_perms[$citizen_role->rid]) ) { 
+//          $widget->mode = RATE_NOPERM_SHOW_DISABLED_WIDGET;
+//          $widget->noperm_behaviour = RATE_NOPERM_SHOW_DISABLED_WIDGET;
+//        }
+      }
+    }
+  }
+}
+
+/**
+ * Count responses (in node type proposal) in statistics block.
+ * 
+ * Implements hook_stats_block_metrics().
+ */
+function opendoors_discussion_stats_block_metrics() {
+
+  $metrics = array();
+
+  // Example calculation of number of comments from stats_block.module
+  $query = db_select('field_revision_field_municipal_response', 'response');
+  $query->join('node', 'n', 'response.revision_id = n.vid AND n.status = 1');
+  $value = $query
+      ->fields('response')
+      ->execute()
+      ->rowCount();
+
+  $metrics['responses'] = array(
+    'label' => 'Responses',
+    'value' => $value,
+    'description' => 'Number of proposals with a municipal responses (published and unpublished.)'
+  );
+
+  return $metrics;
+}
+
+/**
+ * Remove links in comment view: reply and permalink.
+ * 
+ * Implement hook_preprocess_HOOK().
+ */
+function opendoors_discussion_preprocess_comment(&$variables, $hook) {
+  unset($variables['content']['links']['comment']['#links']['comment-reply']);
+  unset($variables['permalink']);
+}
+
+/**
+ * Add CSS class for user voting status
+ * 
+ * Implements hook_process_rate_template_thumbs_up().
+ * 
+ * @author Marco Rademacher <rademacher@zebralog.de>
+ * @see http://drupal.stackexchange.com/questions/61052/rate-votingapi-add-class-to-button-if-user-has-voted
+ */
+function opendoors_discussion_process_rate_template_thumbs_up(&$variables) {
+  extract($variables);
+
+  $classes = 'rate-thumbs-up-btn-up';
+
+  if (isset($results['user_vote']) && $results['user_vote'] == $links[0]['value']) {
+    $classes .= ' user-voted';
+  }
+  else {
+    $classes .= ' user-not-voted';
+  }
+
+  $variables['up_button'] = theme('rate_button', array('text' => $links[0]['text'], 'href' => $links[0]['href'], 'class' => $classes));
+}
+
+
+/**
+ * Theme function for pseudo field municipal_response_short.
+ * 
+ * See opendoors_discussion_node_view().
+ */
+function theme_municipal_response_short($vars) {
+  $classes = $vars['classes'];
+  $text = $vars['text'];
+  return "<div class='municipal-response-short $classes'>$text</div>";  
+}
+
+/**
+ * Set theme function theme_radio_with_description for specific radio elements.
+ */
+function _opendoors_discussion_prerender_radios($vars) {
+  foreach($vars as $key => $val) {
+    if (!is_numeric($key)) {
+      continue;
+    }
+    $vars[$key]['#theme'] = 'radio_with_description';
+    $vars[$key]['#title'] = '';
+  }
+  return $vars;
+}
+
+/**
+ * Add a little user friendlyness to proposal form.
+ */
+function _opendoors_discussion_prerender_addjs($vars) {
+  drupal_add_js(drupal_get_path('module', 'opendoors_discussion') .'/js/proposal_category_explain_terms.js');
+  drupal_add_css(drupal_get_path('module', 'opendoors_discussion') .'/opendoors_discussion.css');
+  return $vars;
+}
+
+/**
+ * Render radio elements with label and label description.
+ * 
+ * We assume that $element['#title'] is unset and not rendered elsewhere.
+ * We also assume that each radio element relates to a taxonomy term which provides
+ * us label and description.
+ * 
+ * Modification of theme_radio().
+ */
+function theme_radio_with_description($variables) {
+  $element = $variables['element'];
+  $element['#attributes']['type'] = 'radio';
+  element_set_attributes($element, array('id', 'name', '#return_value' => 'value'));
+
+  if (isset($element['#return_value']) && $element['#value'] !== FALSE && $element['#value'] == $element['#return_value']) {
+    $element['#attributes']['checked'] = 'checked';
+  }
+  _form_set_class($element, array('form-radio'));
+
+  $output = '<input' . drupal_attributes($element['#attributes']) . ' />';
+  
+  // Now we render the label and description.
+  $tid = $element['#return_value'];
+  if ($tid == '_none') {
+    return $output;
+  }
+  $term = taxonomy_term_load($tid);
+  if (!$term) {
+    return $output;
+  }
+
+  $element_id = $element['#id'];
+  $output .= "<label for='$element_id'>" . '<span class="taxonomy-title">' . check_plain($term->name) . '</span></label>';
+  if ($term->description) {
+    $output .= '<div class="description">' . check_markup($term->description, $term->format) . '</div>';
+  }
+  return $output;
+}
+
+/**
+ * Calculate a proposal's hotness.
+ * 
+ * We calculate the percentage of votes the current node has in the total number
+ * of votes.
+ * 
+ * Implements computed_field_YOUR_FIELD_MACHINE_NAME_compute().
+ * See https://drupal.org/node/126522
+ */
+function computed_field_field_hotness_compute(&$entity_field, $entity_type, $entity, $field, $instance, $langcode, $items) {
+  // TODO: Provide hook for custom calculation
+  
+  // Get the total number of votes
+  static $total_count_votes;
+  if (!isset($total_count_votes)) {
+    $result = db_query("SELECT MAX(value) AS value FROM {votingapi_cache} WHERE function = 'count'");
+    $record = $result->fetchObject();
+
+    // TODO: can we improve performance if we don't save 0 values?
+    if (is_object($record)) {
+      $max_count_votes = $record->value;
+    }
+    else {
+      $max_count_votes = 0;
+    }
+  }
+  
+  // Get the current node's votes
+  $result = db_query(
+    "SELECT value FROM {votingapi_cache} WHERE entity_id = :nid AND function = 'count'",
+    array(':nid' => $entity->nid));
+  $record = $result->fetchObject();
+
+  if (is_object($record)) {
+    $votes_for_node = $record->value;
+  }
+  else {
+    $votes_for_node = 0;
+  }
+  
+  // Rounding is done in computed_field_field_hotness_display().
+  // We devide by count +1 to prevent a devision by zero error.
+  // As a result, a single value cannot be 100% hot.
+  // We reach 100% from rounding only if the count is greater 50.
+  $percentage = ($votes_for_node * 100) / ($max_count_votes + 1);
+  $entity_field[0]['value'] = $percentage;
+}
+
+/**
+ * Display the proposal's hotness.
+ * 
+ * Implements computed_field_YOUR_FIELD_MACHINE_NAME_display()
+ */
+function computed_field_field_hotness_display($field, $entity_field_item, $entity_lang, $langcode, $entity) {
+  $display_output = $entity_field_item['value'];
+  
+  // Round hotness values into intervals of 0 .. 20 .. 40 .. 60 .. 80 .. 100
+  $interval_length = 20;
+  $display_output /= $interval_length;
+  $display_output = round($display_output);
+  $display_output *= $interval_length;
+  
+  return $display_output;
+}
+
+
+/**
+ * Redirect to front page after form submission
+ * 
+ * This is a form submit handler.
+ */
+function _opendoors_discussion_redirect_to_discussion($form, &$form_state) {
+  $form_state['redirect'] =  array('browse-proposals', array(
+    'query' => array(),
+    'fragment' => 'pane-proposal-discussion-intro',
+    'absolute' => TRUE,
+  ));
+}
+
+/**
+ * Hide a comment form's filter tips.
+ * 
+ * This is a form after build function.
+ */
+function _opendoors_discussion_hide_comment_filter_tips(&$form) {
+  // Hide guideliness
+  $form[LANGUAGE_NONE][0]['format']['guidelines']['#access'] = FALSE; 
+  // Hide Filter Tips
+  $form[LANGUAGE_NONE][0]['format']['help']['#access'] = FALSE;
+  return $form;  
+}
+
+/**
+ * Return true if given view queries are used in the current url.
+ * 
+ * @param array $queries
+ *   Array of view queries.
+ * @return boolean
+ */
+function _opendoors_discussion_is_active_query($queries) {
+  if (!is_array($queries)) {
+    return false;
+  }
+  
+  if (count($queries) == 0 && count($_GET) == 1) {
+    return true;
+  }
+  else if (count($queries) == 0) {
+    return false;
+  }
+  else if (array_key_exists('keys', $_GET) && !array_key_exists('keys', $queries)) {
+    return false;
+  }
+  
+  // Test #1: if used as a filter query is a key in the get request
+  foreach($queries as $key => $val) {
+    if ($key == 'sort_by' || $key == 'sort_order') {
+      continue;
+    }
+    if (key_exists($key, $_GET)) {
+      return true;
+    }
+  }
+  
+  // Test #2: if the query is used as a sort option
+  if (isset($_GET['sort_by']) && isset($queries['sort_by']) && $_GET['sort_by'] == $queries['sort_by']) {
+    return true;
+  }
+}
+
+/**
+ * Render filter links for proposal categories.
+ * 
+ * Active terms have the css class 'active-term'
+ * 
+ * @return string
+ *   Rendered html
+ */
+function _opendoors_discussion_get_category_filter() {
+  $path = current_path();
+  $active_tid = 0;
+  if (isset($_GET['field_category_tid'])) {
+    $active_tid = $_GET['field_category_tid'];
+  }
+  
+  $category_filters = '<ul class="secondary-filters categories">';
+  $vocabulary = taxonomy_vocabulary_machine_name_load('proposal_category');
+  $voc_terms = taxonomy_get_tree($vocabulary->vid, 0, null, true);
+  foreach($voc_terms as $term) {
+    $active_class = $term->tid == $active_tid ? 'active-term' : '';
+    $link = l($term->name, $path, array(
+        'query' => array('field_category_tid' => $term->tid), 
+        'fragment' => 'pane-proposal-discussion-intro',
+        'attributes' => array('class' => array($active_class)),
+        ));
+    $category_filters .= '<li>' . $link . '</li>';
+  }
+  $category_filters .= '</ul>';
+  
+  return $category_filters;
+}
+
+/**
+ * Render heatmap legend.
+ */
+function _opendoors_discussion_get_heatmap_legend() {
+  $output = '<div class="heatmap-legend"><span class="cold">' . t('Cold') . '</span>';
+  for($i = 0; $i <= 100; $i+= 20 ) {
+    $output .= "<li class='hotness-$i'>$i</li>";
+  }
+  $output .= '<span class="hot">' . t('Hot') . '</span></div>';
+  
+  return $output;
+}

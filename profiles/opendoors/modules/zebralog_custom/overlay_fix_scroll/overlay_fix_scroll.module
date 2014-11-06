@@ -1,0 +1,16 @@
+<?php
+
+/**
+ * See README.txt for this module's description.
+ * 
+ * @author prinds (Initial Implementation)
+ * @author S. Groetschel <groetschel@zebralog.de> (Adapatation)
+ */
+
+/**
+ * 
+ */
+function overlay_fix_scroll_overlay_parent_initialize()
+{
+	drupal_add_js(drupal_get_path('module', 'overlay_fix_scroll').'/overlay_fix_scroll.js');
+}

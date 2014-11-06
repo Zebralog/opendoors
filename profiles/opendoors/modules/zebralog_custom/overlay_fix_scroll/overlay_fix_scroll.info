@@ -1,0 +1,12 @@
+name = Overlay Fix Scroll Problem
+description = Restores scroll position after closing overlay.
+core = 7.x
+
+dependencies[] = overlay
+
+; Information added by drush on 2014-11-06
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "opendoors"
+datestamp = "1415291275"
+

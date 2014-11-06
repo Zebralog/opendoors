@@ -1,0 +1,13 @@
+name = Delayed Node Ownership
+description = The module tracks anonymous creation of nodes and comments and assigns them to a user if she logs in afterwards.
+core = 7.x
+configure = admin/config/delayed_ownership
+version = 7.x-1.0-proto
+
+
+; Information added by drush on 2014-11-06
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "opendoors"
+datestamp = "1415291275"
+

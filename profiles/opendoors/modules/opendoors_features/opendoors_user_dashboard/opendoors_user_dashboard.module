@@ -1,0 +1,156 @@
+<?php
+/**
+ * @file
+ * Code for the Opendoors User Dashboard feature.
+ */
+
+include_once 'opendoors_user_dashboard.features.inc';
+
+
+/**
+ * Implements hook_menu_alter().
+ *
+ * Hide the "View" tab from the user profile for we don't use this page.
+ *
+ * @author Marco Rademacher <rademacher@zebralog.de>
+ *
+ * @param array $items
+ */
+function opendoors_user_dashboard_menu_alter(&$items) {
+
+  // Disable tab "View" (user profile) on user page
+  $items['user/%user/view']['type'] = MENU_CALLBACK;
+
+  // Show an new tab for the user dashboard
+  //$items['user/%pm_arg/dashboard']['type'] = MENU_LOCAL_TASK;
+  //$items['user/%pm_arg/dashboard']['title'] = 'Dashboard';
+  //$items['user/%pm_arg/dashboard']['weight'] = -10;
+
+  // Provide the dashboard on the standard user/UID path. Doesn't work yet!
+  // @TODO: Provide all user menu callback in this module.
+  //$items['user/%user']['page callback'] = 'page_manager_page_execute';
+  //$items['user/%user']['page arguments'] = array('user_dashboard', 1);
+  //$items['user/%user']['file'] = 'user_dashboard';
+  //$items['user/%user']['module'] = 'page_manager';
+}
+
+
+/**
+ * Implements hook_block_info().
+ *
+ * @author Marco Rademacher - rademacher@zebralog.de
+ *
+ * @return Array of block information
+ */
+function opendoors_user_dashboard_block_info() {
+
+  $blocks = array();
+
+  $blocks['settings_links'] = array(
+    'info' => t('User dashboard: Settings links'),
+    'cache' => DRUPAL_NO_CACHE,
+    'weight' => -49,
+    'status' => false,
+  );
+
+  $blocks['action_links'] = array(
+    'info' => t('User dashboard: Action links'),
+    'cache' => DRUPAL_CACHE_PER_ROLE,
+    'weight' => -40,
+    'status' => false,
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ *
+ * @author Marco Rademacher - rademacher@zebralog.de
+ *
+ * @param $delta String of block machine readable name
+ *
+ * @return Array of renderable information
+ */
+function opendoors_user_dashboard_block_view($delta = '') {
+  global $user;
+
+  $block = array();
+
+  switch ($delta) {
+
+    case 'settings_links':
+
+      if ((arg(0) == 'user') && (arg(1) !== $user->uid)) {
+        break;
+      }
+
+      $items = array();
+      $items[] = l(t('Edit password'), 'user/' . $user->uid . '/edit', array(
+        'query' => drupal_get_destination(),
+      ));
+
+//      $items[] = l(t('Freiwillige Angaben ergänzen'), 'user/' . $user->uid . '/edit', array(
+//        'fragment' => 'user_user_form_group_user_optional',
+//        'query' => drupal_get_destination(),
+//      ));
+
+      if (user_access('subscribe to newsletters')) {
+        $items[] = l(t('Change your newsletter subscriptions'), 'user/' . $user->uid . '/edit/simplenews', array(
+          'fragment' => 'user_user_form_group_user_optional',
+          'query' => drupal_get_destination(),
+        ));
+      }
+
+      if (user_access('subscribe to content')) {
+        $items[] = l(t('Benachrichtigungen verwalten'), 'user/' . $user->uid . '/subscriptions', array(
+          'fragment' => 'user_user_form_group_user_optional',
+          'query' => drupal_get_destination(),
+        ));
+      }
+
+      $block['subject'] = t('Account settings');
+      $block['content'] = theme('item_list', array('items' => $items));
+      break;
+
+    case 'action_links':
+
+      $actions = array();
+
+      // Discussion & proposal links
+      if (module_exists('opendoors_discussion')) {
+        if (user_access('create proposal content')) {
+          $actions[] = l(t('Make a proposal'), 'node/add/proposal');
+        }      
+      }
+
+      // Feedback link
+      if (module_exists('zebra_feedback') && user_access('create feedback content')) {
+        if (function_exists('zebra_feedback_default_page_manager_pages')) {
+          $pages = zebra_feedback_default_page_manager_pages();
+          $path = $pages['lob_und_kritik']->path;
+          $actions[] = l(t('Send feedback'), $path);
+        }
+      }
+
+      $block['subject'] = t('Actions');
+      $block['content'] = theme('item_list', array('items' => $actions));
+      break;
+  }
+
+  return $block;
+}
+
+/**
+ * Hide unneeded user profile fields from users.
+ * 
+ * Implements hook_form_alter().
+ */
+function opendoors_user_dashboard_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'user_profile_form') {
+    if (!user_access('Administer users')) {
+      $form['locale']['#access'] = FALSE;
+      $form['overlay_control']['#access'] = FALSE;
+    }
+  }
+}

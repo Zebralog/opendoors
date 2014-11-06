@@ -1,0 +1,21 @@
+name = Opendoors azure file storage
+description = Use opendoors blob storage for saving files.
+core = 7.x
+package = Opendoors
+dependencies[] = opendoors_discussion
+dependencies[] = opendoors_standards
+features[features_api][] = api:2
+features[features_override_items][] = field_base.field_image
+features[features_override_items][] = field_base.field_municipal_response_image
+features[features_override_items][] = field_base.field_pane_embedded_downloads
+features[features_overrides][] = field_base.field_image.settings|uri_scheme
+features[features_overrides][] = field_base.field_municipal_response_image.settings|uri_scheme
+features[features_overrides][] = field_base.field_pane_embedded_downloads.settings|uri_scheme
+
+
+; Information added by drush on 2014-11-06
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "opendoors"
+datestamp = "1415291275"
+

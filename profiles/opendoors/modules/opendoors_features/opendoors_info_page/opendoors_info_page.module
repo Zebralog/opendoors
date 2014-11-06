@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Opendoors info page feature.
+ */
+
+include_once 'opendoors_info_page.features.inc';

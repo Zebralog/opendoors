@@ -1,0 +1,707 @@
+<?php
+
+/**
+ * Inspired by mark-a-spot
+ */
+
+function opendoors_install_tasks(&$install_state) {
+  $task['opendoors_cleanup_features'] = array(
+    'display_name' => st('Cleanup features'),
+    'display' => FALSE,
+    'type' => 'batch',
+    'run' => INSTALL_TASK_RUN_IF_REACHED,
+    'function' => '_opendoors_cleanup_features',
+  );  
+  $task['opendoors_azure_config'] = array(
+    'display_name' => st('Azure configuration'),
+    'display' => TRUE,
+    'type' => 'form',
+    'function' => '_opendoors_azure_config_form'
+  );
+  $task['opendoors_create_example_content'] = array(
+    'display_name' => st('Create example content'),
+    'display' => TRUE,
+    'type' => 'form',
+    'function' => '_opendoors_create_example_content_form',
+  );  
+  return $task;
+}
+
+function opendoors_install() {
+  // Add text formats.
+  $filtered_html_format = array(
+    'format' => 'filtered_html',
+    'name' => 'Filtered HTML',
+    'weight' => 0,
+    'filters' => array(
+      // URL filter.
+      'filter_url' => array(
+        'weight' => 0,
+        'status' => 1,
+      ),
+      // HTML filter.
+      'filter_html' => array(
+        'weight' => 1,
+        'status' => 1,
+      ),
+      // Line break filter.
+      'filter_autop' => array(
+        'weight' => 2,
+        'status' => 1,
+      ),
+      // HTML corrector filter.
+      'filter_htmlcorrector' => array(
+        'weight' => 10,
+        'status' => 1,
+      ),
+    ),
+  );
+  $filtered_html_format = (object) $filtered_html_format;
+  filter_format_save($filtered_html_format);
+
+  $full_html_format = array(
+    'format' => 'full_html',
+    'name' => 'Full HTML',
+    'weight' => 1,
+    'filters' => array(
+      // URL filter.
+      'filter_url' => array(
+        'weight' => 0,
+        'status' => 1,
+      ),
+      // Line break filter.
+      'filter_autop' => array(
+        'weight' => 1,
+        'status' => 1,
+      ),
+      // HTML corrector filter.
+      'filter_htmlcorrector' => array(
+        'weight' => 10,
+        'status' => 1,
+      ),
+    ),
+  );
+  $full_html_format = (object) $full_html_format;
+  filter_format_save($full_html_format);
+  
+  // Any themes without keys here will get numeric keys and so will be enabled,
+  // but not placed into variables.
+  $enable = array(
+    'theme_default' => 'opendoors_heat',
+  );
+  theme_enable($enable);
+
+  foreach ($enable as $var => $theme) {
+    if (!is_numeric($var)) {
+      variable_set($var, $theme);
+    }
+  }
+
+  // Block settings
+  $default_theme = variable_get('theme_default', 'opendoors_heat');
+
+  $blocks = array(
+    array(
+      'module' => 'user_links',
+      'delta' => 'user_links',
+      'theme' => $default_theme,
+      'status' => 1,
+      'weight' => 0,
+      'region' => 'secondary_navigation',
+      'pages' => '',
+      'cache' => -1,
+    ),
+  );
+  $query = db_insert('block')->fields(
+    array(
+      'module',
+      'delta',
+      'theme',
+      'status',
+      'weight',
+      'region',
+      'pages',
+      'cache',
+    )
+  );
+  foreach ($blocks as $block) {
+    $query->values($block);
+  }
+  $query->execute();
+  
+  // Node types
+  // 
+  // Insert default pre-defined node types into the database. For a complete
+  // list of available node type attributes, refer to the node type API
+  // documentation at: http://api.drupal.org/api/HEAD/function/hook_node_info.
+  $types = array(
+    array(
+      'type' => 'page',
+      'name' => st('Basic page'),
+      'base' => 'node_content',
+      'description' => st("Use <em>basic pages</em> for your static content, such as an 'About us' page."),
+      'custom' => 1,
+      'modified' => 1,
+      'locked' => 0,
+    ),
+  );
+  foreach ($types as $type) {
+    $type = node_type_set_defaults($type);
+    node_type_save($type);
+    node_add_body_field($type);
+  }
+  
+  // Default "Basic page" to not be promoted and have comments disabled.
+  variable_set('node_options_page', array('status'));
+  variable_set('comment_page', COMMENT_NODE_HIDDEN);
+  // Don't display date and author information for "Basic page" nodes by default.
+  variable_set('node_submitted_page', FALSE);
+  
+  // Insert default pre-defined RDF mapping into the database.
+  $rdf_mappings = array(
+    array(
+      'type' => 'node',
+      'bundle' => 'page',
+      'mapping' => array(
+        'rdftype' => array('foaf:Document'),
+      ),
+    ),
+    array(
+      'type' => 'node',
+      'bundle' => 'article',
+      'mapping' => array(
+        'field_image' => array(
+          'predicates' => array('og:image', 'rdfs:seeAlso'),
+          'type' => 'rel',
+        ),
+        'field_tags' => array(
+          'predicates' => array('dc:subject'),
+          'type' => 'rel',
+        ),
+      ),
+    ),
+  );
+  foreach ($rdf_mappings as $rdf_mapping) {
+    rdf_mapping_save($rdf_mapping);
+  }
+  
+  // Enable default permissions for system roles.
+  $filtered_html_permission = filter_permission_name($filtered_html_format);
+  user_role_grant_permissions(DRUPAL_ANONYMOUS_RID, array('access comments', 'access content', 'access overlay', 'create proposal content', 'post comments', 'skip comment approval', 'subscribe to newsletters', 'use exclude node title', 'view field_municipal_response', 'view field_municipal_response_author', 'view field_municipal_response_date', 'view field_municipal_response_image', 'view field_recommended', 'view files', 'view own field_municipal_response', 'view stats block', $filtered_html_permission));
+  user_role_grant_permissions(DRUPAL_AUTHENTICATED_RID, array('access comments', 'access content', 'access overlay', 'create proposal content', 'post comments', 'skip comment approval', 'subscribe to newsletters', 'view field_municipal_response', 'view field_municipal_response_author', 'view field_municipal_response_date', 'view field_municipal_response_image', 'view field_recommended', 'view files', 'view own field_municipal_response', 'view stats block', 'vote on proposals', $filtered_html_permission));
+  
+  // Create a default role for site administrators, with all available permissions assigned.
+  $admin_role = new stdClass();
+  $admin_role->name = 'Administrator';
+  $admin_role->weight = 2;
+  user_role_save($admin_role);
+  user_role_grant_permissions($admin_role->rid, array_keys(module_invoke_all('permission')));
+  // Set this as the administrator role.
+  variable_set('user_admin_role', $admin_role->rid);
+  
+  $citizen_role = new stdClass();
+  $citizen_role->name = 'Citizen';
+  user_role_save($citizen_role);
+  user_role_grant_permissions($citizen_role->rid, array( 'use exclude node title', 'edit field_municipal_response_image', 'view files' ));
+  
+  // TODO: Set the right permissions
+  $moderator_role = new stdClass();
+  $moderator_role->name = 'Moderator';
+  user_role_save($moderator_role);
+  user_role_grant_permissions($moderator_role->rid, array('access administration menu', 'access administration pages', 'access ckeditor link', 'access content overview', 'access contextual links', 'administer comments', 'administer delayed ownership', 'administer taxonomy', 'create field_municipal_response', 'create field_municipal_response_author', 'create field_municipal_response_date', 'create field_recommended', 'create page content', 'create pane_embedded content', 'create url aliases', 'delete any page content', 'delete any proposal content', 'delete terms in 2', 'edit any page content', 'edit any pane_embedded content', 'edit any proposal content', 'edit field_municipal_response', 'edit field_municipal_response_author', 'edit field_municipal_response_date', 'edit field_municipal_response_image', 'edit field_recommended', 'edit own field_municipal_response_author', 'edit own field_municipal_response_date', 'edit terms in 2', 'translate interface', 'use text format full_html', 'use text format wysiwyg', 'view files', 'view own field_municipal_response_author', 'view own field_municipal_response_date', 'view the administration theme', ));
+  
+  // Assign user 1 the "administrator" role.
+  db_insert('users_roles')
+    ->fields(array('uid' => 1, 'rid' => $admin_role->rid))
+    ->execute();
+  
+  // Default admin / registration role
+  variable_set('registration_role_roles', $citizen_role->rid);
+  variable_set('user_admin_role', $admin_role->rid);
+  
+  // Disable user picture support
+  variable_set('user_pictures', '0');
+  // Allow visitor account creation with administrative approval.
+  variable_set('user_register', USER_REGISTER_VISITORS);
+  
+  // Disable "Users may set their own time zone."
+  variable_set('configurable_timezones', 0);
+  // First day of the week
+  variable_set('date_first_day', 1);
+  
+  // Set default front page
+  variable_set('site_frontpage', 'browse-proposals');
+  
+  // Enable the admin theme.
+  db_update('system')
+    ->fields(array('status' => 1))
+    ->condition('type', 'theme')
+    ->condition('name', 'seven')
+    ->execute();
+  variable_set('admin_theme', 'seven');
+  variable_set('node_admin_theme', '1');
+  
+  // Admin menu settings: Enable search box by default
+  variable_set('admin_menu_components', array (
+    'admin_menu.icon' => true,
+    'admin_menu.menu' => true,
+    'admin_menu.search' => true,
+    'admin_menu.users' => true,
+    'admin_menu.account' => true,
+    'shortcut.links' => false,
+  ));
+  
+  // ++ Menus ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  $secondary_menu = array(
+      'menu_name' => 'menu-secondary-menu',
+      'title' => st('Secondary Menu'),
+      'description' => ('Secondary menu items such as Legal notice, Contact etc.'),
+  );
+  menu_save($secondary_menu);
+  variable_set('menu_secondary_links_source', $secondary_menu['menu_name']);
+  
+  variable_set('menu_options_page', array (
+    0 => 'main-menu',
+    1 => $secondary_menu['menu_name'],
+  ));
+
+  // ++ Settings for content creation workflow +++++++++++++++++++++++++++++++++
+  variable_set('delayed_ownership_nodetype_proposal', 1);
+  variable_set('delayed_ownership_nodetype_proposal_message', 1);
+  variable_set('delayed_ownership_comments', 1);
+  variable_set('delayed_ownership_comments_message', 1);
+  variable_set('delayed_ownership_comments_page', '');
+  
+  variable_set('delayed_ownership_nodetype_page', 0);
+  variable_set('delayed_ownership_nodetype_pane_embedded', 0);
+  variable_set('delayed_ownership_nodetype_simplenews', 0);
+  
+  variable_set('delayed_ownership_feedback_cancel', st('<h2>You want to proceed without registration?</h2><p>Your proposal will be saved as authored by <em>Anonymous</em>. You can continue using this site.</p>'));
+  variable_set('delayed_ownership_feedback_login',  st('<h2>You have an account already?</h2><p>Please login. Your proposal will be linked to your account.</p>'));
+  variable_set('delayed_ownership_feedback_register', st(
+    '<h2>You can register now.</h2>' .
+    '<p>Your proposal will be published under the user name you choose.</p>' .
+    '<p>As a registered user you can vote on other peoples\' proposals.</p>' .
+    '<p>Use your user profile page to keep track of interesting discussions.</p>'));
+  
+  // ++ Navigation and UI ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  // Pathauto: automatic path alias for new nodes
+  variable_set('pathauto_node_proposal_pattern',  'proposal/[node:nid]');
+  variable_set('pathauto_node_simplenews_pattern:', 'newsletters/[node:nid]');
+  variable_set('pathauto_node_page_pattern', 'page/[node:nid]');
+
+  // Overlay is used to display certain paths
+  variable_set('overlay_paths_ui_paths',  array (
+    'node/add' => 
+    array (
+      'width' => '600px',
+    ),
+    'user' => true,
+    'user/*/dashboard' => true,
+    'user/register' => true,
+    'user/register/*' => true,
+    'user/password' => true,
+    'user/register/step/2' => false,
+    'newsletter/subscriptions' => true,
+    'proposal/*' => true,
+    'page/*' => true,
+    'comment/reply/*' => true,
+  ));
+  
+  // Statistics block: which metrics to show
+  variable_set('stats_block_show_metrics', array('proposal-nodes' => 'proposal-nodes', 'responses' => 'responses',));
+  
+  // +++ Language settings +++++++++++++++++++++++
+  variable_set('i18n_string_source_language', 'en');
+  
+  module_enable(array('azure_storage'));
+}
+
+/**
+ * Returns the form for creating content.
+ * 
+ * We will ask the user only to click on proceed. We need a separate page request
+ * for content creation because we want to be sure that azure_storage is running. 
+ */
+function _opendoors_create_example_content_form() {
+  $form = array();
+  
+  $form['create_example_content'] = array(
+    '#markup' => st('We will now create example content. Please click proceed.')
+  );
+  // Submit button
+  $form['submit'] = array(
+    '#type' => 'submit', 
+    '#value' => st('Proceed'),
+    '#weight' => 100,
+    '#submit' => array('_opendoors_create_example_content'),
+  );
+  return $form;
+}
+
+/**
+ * Create example content.
+ */
+function _opendoors_create_example_content($form, &$form_state) {
+  _opendoors_create_example_nodes();
+  _opendoors_create_example_terms();
+  _opendoors_fix_newsletter();
+}
+
+function _opendoors_create_example_nodes() {
+  $language = variable_get('language_default', null);
+  if ($language == null) {
+    global $language;
+  }
+  
+  // Disclaimer page
+  $node = new stdClass;
+  $node->type = 'page';
+  node_object_prepare($node);
+  $node->title = st('Disclaimer');
+  $node->language = LANGUAGE_NONE;
+  $node->uid = 1;
+  $node_language = isset($node->language) ? $node->language : LANGUAGE_NONE;
+  $node->body[$node_language][0]['value'] = st(_opendoors_disclaimer_body());
+  $node->body[$node_language][0]['format']  = 'filtered_html'; 
+  $node->menu['enabled'] = 1;
+  $node->menu['link_title'] = $node->title;
+  $node->menu['description'] = $node->title;
+  $node->menu['menu_name'] = 'menu-secondary-menu';
+  node_save($node);
+  
+  // Privacy page
+  $node = new stdClass;
+  $node->type = 'page';
+  node_object_prepare($node);
+  $node->title = st('Privacy');
+  $node->language = LANGUAGE_NONE;
+  $node->uid = 1;
+  $node_language = isset($node->language) ? $node->language : LANGUAGE_NONE;
+  $node->body[$node_language][0]['value'] = st(_opendoors_privacy_body());
+  $node->body[$node_language][0]['format']  = 'filtered_html';  
+  $node->menu['enabled'] = 1;
+  $node->menu['link_title'] = $node->title;
+  $node->menu['description'] = $node->title;
+  $node->menu['menu_name'] = 'menu-secondary-menu';
+  node_save($node);
+  
+  // Discussion rules page (german only)
+  if ($language->language == 'de') {
+    $node = new stdClass;
+    $node->type = 'page';
+    node_object_prepare($node);
+    $node->title = 'Regeln';
+    $node->language = LANGUAGE_NONE;
+    $node->uid = 1;
+    $node_language = isset($node->language) ? $node->language : LANGUAGE_NONE;
+    $node->body[$node_language][0]['value'] = _opendoors_discussion_rules_de();
+    $node->body[$node_language][0]['format']  = 'wysiwyg';  
+    $node->menu['enabled'] = 1;
+    $node->menu['link_title'] = $node->title;
+    $node->menu['description'] = $node->title;
+    $node->menu['menu_name'] = 'menu-secondary-menu';
+    node_save($node);
+  }
+  
+  // Welcome proposal
+  $node = new stdClass;
+  $node->type = 'proposal';
+  node_object_prepare($node);
+  $node->title = '';
+  $node_language = isset($node->language) ? $node->language : LANGUAGE_NONE;
+  $node->body[$node_language][0]['value'] = st('Welcome! You can start asking your questions.');
+  $node->body[$node_language][0]['format']  = 'filtered_html';
+  $node->uid = 1;
+  node_save($node);
+  
+  // Content that's used in panel panes
+  $node = new stdClass;
+  $node->type = 'pane_embedded';
+  node_object_prepare($node);
+  $node_language = isset($node->language) ? $node->language : LANGUAGE_NONE;
+  $node->field_pane_embedded_id[$node_language][0]['value'] = 'opendoors-front-proposal-discussion-intro';
+  $node->title = st('Your questions and answers');
+  $node->body[$node_language][0]['value'] = st('This is what people asked so far.');
+  $node->body[$node_language][0]['format']  = 'filtered_html';
+  $node->uid = 1;
+  if ($node_language == LANGUAGE_NONE && !isset($node->language)) {
+    $node->language = $language->language;
+  }
+  node_save($node);
+  
+  // Slide for front page
+  $node = new stdClass;
+  $node->type = 'slide';
+  node_object_prepare($node);
+  $node->title = st('Welcome');
+  $node_language = isset($node->language) ? $node->language : 'und';
+  $node->body[$node_language][0]['value'] = 
+    st('We very happily welcome you to our consultation. Please ask your questions concerning our planned construction!') .
+    "\n\n" .
+    st('Image copyright: Creative commons license, image by <a href="!author_url">!author</a>, Original image: <a href="!url">Wikimedia Commons</a>', array('!url' => 'http://commons.wikimedia.org/wiki/File:Peaugres_zebre.jpg?uselang=de', '!author' => 'Vacnor@wikipedia', '!author_url' => 'http://commons.wikimedia.org/wiki/User:Vacnor?uselang=de'));
+  $node->body[$node_language][0]['format']  = 'filtered_html';
+  $node->uid = 1;
+  
+  if ($node_language == 'und' && !isset($node->language)) {
+    $node->language = $language->language;
+  }
+  
+  // Prepare image and add to node
+  $filepath = drupal_realpath(drupal_get_path('profile', 'opendoors') . '/images/zebra.png');
+  // Create managed file object
+  $file = (object) array(
+    'uid' => 1,
+    'uri' => $filepath,
+    'filemime' => file_get_mimetype($filepath),
+    'status' => 1,
+  );
+  // We save the file to the root of the files directory.
+  if (module_exists('od_azure_file_storage')) {
+    $dest_dir = 'opendoorsstorage://example_content';
+  }
+  else {
+    $dest_dir = 'public://example_content';
+  }
+  file_prepare_directory($dest_dir, FILE_CREATE_DIRECTORY);
+  $file = file_copy($file, $dest_dir, FILE_EXISTS_RENAME);
+  $node->field_slide_teaser_image[$node_language][0] = (array)$file;
+  
+  node_save($node);
+}
+
+/**
+ * Cleanup features where neccessary.
+ */
+function _opendoors_cleanup_features() {
+  // Slideshow feature would miss its body field. So we explicitly need to
+  // revert.
+  features_revert_module('opendoors_slideshow');
+}
+
+/**
+ * Returns the form for configuring our azure storage account.
+ * @return array
+ */
+function _opendoors_azure_config_form() {
+  if (!module_exists('azure_storage')) {
+    return array();
+  }
+  $form = array();
+  
+  $form['use_azure_storage'] = array(
+    '#type' => 'checkbox',
+    '#title' => st('Use azure storage'),
+    '#description' => st('If you\'re running this platform as an azure cloud service we recommend to store user generated files in an azure storage blob.'),
+  );
+  
+  $form['azure_storage'] = array(
+    '#type' => 'fieldset',
+    '#title' => st('Connect your azure storage account'),
+    '#weight' => 5,
+    '#states' => array(
+      'visible' => array(
+        ':input[name="use_azure_storage"]' => array('checked' => TRUE),
+      ),
+      'invisible' => array(
+        ':input[name="use_azure_storage"]' => array('checked' => FALSE),
+      ),
+    ),
+  );
+  $form['azure_storage']['#states']['required'] = $form['azure_storage']['#states']['visible'];
+  
+  // TODO: Make fields required only when visible
+  // see https://api.drupal.org/comment/54298#comment-54298
+  $form['azure_storage']['account'] = array(
+    '#type' => 'textfield',
+    '#title' => st('Storage Account Name'),
+    '#description' => st('The name of your Windows Azure Storage account.'),
+  );
+  $form['azure_storage']['blob_container'] = array(
+    '#type' => 'textfield',
+    '#title' => st('Blob container'),
+    '#description' => st('The storage container you will use for storing files from this drupal system.'),
+  );
+  $form['azure_storage']['primary_key'] = array(
+    '#type' => 'textfield',
+    '#title' => st('Primary access key'),
+    '#description' => st('The primary access key attached to this Windows Azure Storage account.'),
+  );
+  
+  // Submit button
+  $form['submit'] = array(
+    '#type' => 'submit', 
+    '#value' => st('Proceed'),
+    '#weight' => 100,
+    '#submit' => array('_opendoors_form_azure_config_submit'),
+  );
+  
+  // Validation handler
+  $form['#validate'] = array('_opendoors_form_azure_config_validate');
+  
+  return $form;
+}
+
+/**
+ * Validation handler for azure storage configuration form.
+ * 
+ * We need a custom handler because we have conditional required fields.
+ */
+function _opendoors_form_azure_config_validate($form, &$form_state) {
+  if ($form_state['values']['use_azure_storage']) {
+    $missing_fields = array();
+    if ($form_state['values']['account'] == '') {
+      $missing_fields[] = 'account';
+    }
+    if ($form_state['values']['blob_container'] == '') {
+      $missing_fields[] = 'blob_container';
+    }
+    if ($form_state['values']['primary_key'] == '') {
+      $missing_fields[] = 'primary_key';
+    }
+    
+    foreach($missing_fields as $field) {
+      form_set_error($field, st('!name field is required.', array('!name' => $form['azure_storage'][$field]['#title'])));
+    }
+  }
+} 
+
+/**
+ * Submit handler for azure storage configuration form.
+ * 
+ * See _opendoors_azure_config_form().
+ */
+function _opendoors_form_azure_config_submit($form, &$form_state) {
+  // TODO: test connection
+  // Create azure storage settings.
+  if ($form['use_azure_storage']['#value'] == 1) {
+    $azure_storage = new stdClass();
+    $azure_storage->name = 'opendoorsstorage';
+    $azure_storage->account =  $form['azure_storage']['account']['#value'];
+    $azure_storage->primary_key = $form['azure_storage']['primary_key']['#value'];
+    $azure_storage->blob_container = $form['azure_storage']['blob_container']['#value'];
+    $azure_storage->blob_custom_url = $azure_storage->account . '.blob.core.windows.net';
+
+    // Default / automatic settings
+    $azure_storage->disabled = FALSE; /* Edit this to true to make a default azure_storage disabled initially */
+    $azure_storage->export_type = 'azure_storage';
+    $azure_storage->api_version = 1;
+    $azure_storage->blob_url = 'blob.core.windows.net';
+    $azure_storage->cache_control = '';
+
+    ctools_export_crud_save('azure_storage', $azure_storage);
+    module_enable(array('od_azure_file_storage'));
+  }
+  else {
+    module_disable(array('azure_storage'));
+  }
+}
+
+/**
+ * Fix simplenews settings.
+ */
+function _opendoors_fix_newsletter() {
+  // Find out the newsletter tid.
+  $newsletter_ids = array_keys(simplenews_category_list());
+  if (count($newsletter_ids) == 0) {
+    return;
+  }
+  $tid = $newsletter_ids[0];
+  
+  // Modify the newsletter category.
+  $newsletter = simplenews_category_load($tid);
+  if (!is_object($newsletter)) {
+    return;
+  }
+  $newsletter->name = st('!site_name newsletter', array('!site_name' => variable_get('site_name')));
+  $newsletter->from_address = variable_get('site_mail');
+  $newsletter->from_name = variable_get('site_name');
+  $newsletter->description = st('Please describe your newsletter here.');
+  simplenews_category_save($newsletter);
+  
+  // Newsletter category name&description are taken from the associated taxonomy
+  // term. So we also have to modify the term.
+  $term = taxonomy_term_load($newsletter->tid);
+  $term->name = $newsletter->name;
+  $term->description = $newsletter->description;
+  taxonomy_term_save($term);
+}
+
+/**
+ * Create a couple of proposal categories.
+ */
+function _opendoors_create_example_terms() {
+  $voc_category = taxonomy_vocabulary_machine_name_load('proposal_category');
+
+  for ($i=1; $i <= 3; $i++) {
+    $term = new stdClass();
+    $term->vid = $voc_category->vid;
+    $term->name = st('Category') . ' ' . $i;
+    $term->description = st('You may want to provide a better description of !term_name', array('!term_name' => $term->name));
+    taxonomy_term_save( $term );
+  }
+}
+
+function _opendoors_disclaimer_body() {
+  return "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim. Donec pede justo, fringilla vel, aliquet nec, vulputate eget, arcu. In enim justo, rhoncus ut, imperdiet a, venenatis vitae, justo. Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim. Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus. Phasellus viverra nulla ut metus varius laoreet.";
+}
+
+function _opendoors_privacy_body() {
+  return 
+"The protection of your privacy when using this online platform is an important matter to us. This website was produced in accordance with the German Telemedia Act (TMG). Personal data will be processed in accordance with the German Data Protection Act (BDSG).
+
+This website is hosted on a server at HOSTING COMPANY in CITY. The data are stored separately from other applications.
+
+Personal data
+
+Personal data is information that can be specifically linked to you, such as your email address. Information that cannot be linked to you personally is not covered by this. We are not allowed to collect and process your personal data unless you have given us your consent, or unless a legal regulation permits us to do so. In addition to your access data, personal data will be supplied to this website when you:
+
+    register
+    submit comments or ratings
+    send an e-mail to our moderators.
+
+The personal data that we collect in this connection are processed exclusively for the purpose of operating and improving this portal. We will not supply your data to third parties or use it for other purposes.
+
+Access data
+
+Basically you are able to visit this platform without disclosing your identity. To protect our data processing systems against attacks, however, we do log visits for a limited period of time. These server access data are used exclusively to safeguard the operation of our technical systems, and are not used for other purposes. We ourselves will only ever access these log files if technical problems arise, and the data stored in the files can help rectify those problems.
+
+Data on access to the online platform itself are only ever stored anonymously. These data include for instance the name of your Internet service provider, the website from which you accessed our platform, and the pages that you visited on our website. It is not possible to draw any inferences from this information concerning your person. The information is stored exclusively for purposes of statistical evaluation of access figures and to improve our online offering.
+
+Registration                                 
+
+When you register for this online platform your personal data will be collected and stored. Initially, all you need to do to register is choose a username (a ‘pseudonym’) and supply a valid e-mail address. You may use your real name as a username, but please remember that it will be publicly visible, which means that third parties will be able to see that you are the author of any inputs and comments that you post. We will not publish your e-mail address under any circumstances, and will use it solely for the purpose of managing your user account for this online platform.
+
+Since we would like to know which sections of the population use our online platform, when you register we will ask you to supply additional personnel data (such as your age and gender). Answering these questions is voluntary, and is not a precondition for registering and using the platform. We will evaluate the data supplied in this connection in an anonymous form for purposes of socio-demographic analysis. The results of the analysis may be published for purposes of advertising and reporting on the online platform. Readers will not be able to link any of the results of the analysis to specific participants.
+
+Inputs and comments
+
+The content you post on the platform (such as comments) will be stored, and will be publicly accessible. Content that you post as a registered user will also be published in conjunction with the username that you have chosen. We will publish any inputs that you post as a non-registered user in conjunction with the pseudonym ‘guest’. Please remember that any personal data (such as your e-mail or postal address) that you include in your posts will be publicly visible.
+
+Use of cookies
+
+This online platform uses cookies. Cookies are small text files that are stored locally in the browser cache of visitors to the site. When a visitor returns to the site, the cookies enable it to recognise his or her browser. This means that any inputs or comments you have posted as a guest can subsequently still be ascribed to you, should you decide to register at a later date. The lifespan of the cookies we use is limited to one week, though you can delete them yourself at any time using your browser.
+
+You also have the option of disabling cookies from this online platform by adjusting you browser. However, you will then no longer be able to register or use other functions of the online platform.
+
+E-mail correspondence
+
+When you send us an e-mail, for instance using the contact form for the online platform, your e-mail address is then transmitted as an item of personal data. This e-mail address will be used exclusively for correspondence with you, and will not be processed for any other purposes. Nor will your e-mail address be passed on to third parties. If you wish to contact us by e-mail, please use the following address: moderation@EXAMPLE.COM
+
+Data deletion and the right to information
+
+All data are collected and used exclusively for the purpose of operating and improving this service. All personal data are deleted in accordance with the legal regulations.
+
+As a user you are entitled to receive information on your stored personal data, free of charge. Pursuant to the legal regulations you are also entitled to have these data corrected, blocked or deleted. To do so, please contact our website moderators by sending an e-mail to: moderation@EXAMPLE.COM
+
+Links to other websites
+
+Our online platform contains links to other websites. We have no influence over their content or their compliance with data protection regulations, and so we cannot accept any responsibility for this. Our declaration on data protection therefore applies to this online platform only.
+
+Should you have any further questions concerning data protection on this platform, please send an e-mail to: moderation@EXAMPLE.COM.
+";
+}
+
+function _opendoors_discussion_rules_de() {
+  return '<p>Wir freuen uns über Ihre aktive Teilnahme am Online-Dialog. Die Plattform bietet Ihnen verschiedene Möglichkeiten zur Beteiligung: Sie können Vorschläge machen, Ihre Meinung äußern und Fragen stellen. Um einen konstruktiven und fruchtbaren Austausch für alle Teilnehmenden sicherzustellen, gelten die nachfolgenden Dialogregeln. Bei Verstößen gegen die Regeln kann die Moderation dieser Plattform die Veröffentlichung einzelner Beiträge zurücknehmen oder bei wiederholter Verletzung der Regeln einzelne Nutzerinnen und Nutzer sperren.</p><p><strong>1. Sachlichkeit, Wahrhaftigkeit und Respekt</strong></p><p>Formulieren Sie Ihre Beiträge sachlich, wahrhaftig und respektvoll. Vertrauen Sie auf die Kraft Ihrer Argumente und behaupten Sie nichts Unwahres. Respektieren Sie die Meinung der anderen Teilnehmenden, auch wenn Sie in der Sache unterschiedlicher Auffassung sind. Beleidigungen, Bedrohungen, Schimpfwörter, rassistische, sexistische oder pornographische sowie andere strafrechtlich relevante Äußerungen sind nicht erlaubt.</p><p><strong>2. klare und eindeutige Sprache</strong></p><p>Schreiben Sie stets klar und eindeutig was Sie meinen. Je kürzer und prägnanter Sie Ihre Beiträge fassen, umso mehr Menschen werden sie lesen. Um Missverständnisse zu vermeiden, verzichten Sie auf doppeldeutige Aussagen, Ironie, Sarkasmus oder anderen Formen &bdquo;versteckten&ldquo; Humors.</p><p><strong>3. Themenbezug</strong></p><p>Der Online-Dialog ist kein Selbstzweck, sondern soll eine zielorientierte Diskussion zur Sache ermöglichen. Verzichten Sie daher bitte auf themenfremde Beiträge.</p><p><strong>4. keine Vielschreiberei</strong></p><p>Führen Sie keine Monologe. Lassen Sie andere Teilnehmer zu Wort kommen und versuchen Sie nicht Diskussionen durch übermäßig häufige oder überlange Beiträge zu dominieren.</p><p><strong>5. Registrierung</strong></p><p>Mit der Registrierung können Sie alle Möglichkeiten nutzen, um auf der Plattform aktiv zu sein (weitere Informationen dazu finden Sie in den <a href="faq-page#n1754">FAQs</a>). Wenn Sie sich erstmalig anmelden, wählen Sie bitte keinen anstößigen oder missverständlichen Nutzernamen und täuschen Sie nicht vor eine andere Person zu sein. Mehrfache Registrierungen einer einzelnen Person<br />sind nicht zulässig und können zur Sperrung aller zu diesem Zweck angelegten Accounts führen. Sie können sich auch als Gast am Online-Dialog beteiligen. Dafür ist keine Registrierung erforderlich. Gehen sie mit dieser Möglichkeit bitte verantwortungsvoll um.</p><p><strong>6. persönliche Daten</strong></p><p>Veröffentlichen Sie keine personenbezogenen Daten &ndash; weder von sich selbst noch von anderen. Gehen Sie in Ihrem eigenen Interesse achtsam mit Angaben wie E-Mail-Adresse, Postanschrift oder weiteren Kontaktdaten um.</p><p><strong>7. Quellen, Links und Werbung</strong></p><p>Wenn Sie (auch nur sinngemäß) zitieren, geben Sie soweit möglich eine Quelle an, damit andere Ihre Aussage im Original nachvollziehen können. Das Setzen von Links auf andere Internetseiten kann hilfreich sein, allerdings gelten auch für verlinkte Seiten unsere Dialogregeln (insbesondere Regel 1). Werbung für kommerzielle Produkte, Dienstleistungen und private Internetseiten ohne erkennbaren Bezug zum Thema ist nicht zulässig.</p><p><strong>8. Lizenz und Urheberrecht</strong></p><p>Alle von den Teilnehmenden eingestellten Inhalte stehen unter der <a href="http://creativecommons.org/licenses/by/3.0/de/" title="CC by Lizenz">CC by-Lizenz</a>, das heißt, sie dürfen unter Nennung des (Benutzer-)Namens des Autors, sowie der URL dieses Internetangebots unentgeltlich weiter verwendet werden. Inhalte, zu deren Verwendung die Teilnehmenden im Rahmen dieses Online-Dialogs nicht berechtigt sind, dürfen nicht eingespeist werden. Die Teilnehmenden müssen selber prüfen, ob diese Berechtigung vorliegt.</p><p><strong>9. Gültigkeit der Regeln</strong></p><p>Die vorstehenden Regeln gelten im Regelfall für den gesamten Online-Dialog. Die Moderation behält sich allerdings vor, in begründeten Ausnahmesituationen die vorstehenden Regeln abzuändern oder zu ergänzen. Solche Änderungen der Dialogregeln werden jedoch auf der Projektseite bekannt gegeben und begründet. Die Dialogregeln gelten stets für alle<br />Teilnehmenden in gleicher Weise.</p><p><strong>10. Kritik an den Dialogregeln</strong></p><p>Ihre Anregungen und Kommentare zu dem Verfahren, den Dialogregeln und der Moderation können Sie gerne als Frage einbringen hier und mit dem Thema (Lob&amp;Kritik) versehen.</p><p>Die hier dargestellten Dialogregeln stehen unter <a href="http://creativecommons.org/licenses/by/3.0/de/" title="CC by Lizenz">CC by-Lizenz</a>; Urheber ist die <a href="http://www.zebralog.de" title="Zur Webseite der Zebralog GmbH &amp; Co. KG.">Zebralog GmbH &amp; Co. KG</a>.</p>';
+}

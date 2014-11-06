@@ -1,0 +1,989 @@
+<?php
+
+/**
+ * @file
+ * This module assigns a node's authorship to a user which was previously
+ * anymous or not logged in. As soon as the user logs in, the module checks
+ * which nodes were created by the user and assigns them to him.
+ *
+ * The module uses a hash of session IDs and IP addresses to track and identify
+ * users.
+ *
+ * @author Stephan Grötschel <groetschel@zebralog.de>
+ * @author Frank Ralf <frank.ralf@comm-press.de>
+ * @author Marco Rademacher <rademacher@zebralog.de>
+ */
+
+// Parameter: Maximum time an IP address is stored for an anonymous node
+// (in seconds); Default: 1 day.
+define('DELAYED_OWNERSHIP_MAX_MINUTES', 60);
+
+// Default feedback page the guest user is led to after creation of attributable
+// content.
+define('DELAYED_OWNERSHIP_FEEDBACK_PAGE', 'delayed_ownership_feedback');
+
+// Default page to leave the feedback page to if feedback page is called without
+// destination.
+define('DELAYED_OWNERSHIP_DESTINATION', '<front>');
+
+// Tell Drupal to save sessions - also for anomyous users.
+drupal_save_session(TRUE);
+
+// We have to save something in the session to activate it.
+$_SESSION['delayed_ownership'] = 'initialize_session';
+
+/**
+ * Implements hook_menu().
+ *
+ * - Callback to feedback page accessible for all
+ * - Menu item for system settings page accessible for admins
+ */
+function delayed_ownership_menu() {
+  $items = array();
+
+  $items[DELAYED_OWNERSHIP_FEEDBACK_PAGE] = array(
+    'title' => 'No account yet?',
+    'description' => 'Feedback page',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'delayed_ownership_feedback_page',
+    'access callback' => TRUE,
+  );
+  $items[DELAYED_OWNERSHIP_FEEDBACK_PAGE .'/view'] = array(
+    'title' => 'View',
+    'description' => 'Feedback page',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items[DELAYED_OWNERSHIP_FEEDBACK_PAGE . '/edit'] = array(
+    'title' => 'Edit',
+    'description' => 'Edit delayed ownership feedback page',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('delayed_ownership_feedback_page_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer delayed ownership'),
+  );
+
+  $items['admin/config/content/delayed_ownership'] = array(
+    'title' => 'Delayed ownership',
+    'description' => 'Basic configuration of max time and nodetypes.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('delayed_ownership_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer delayed ownership'),
+  );
+
+  return $items;
+}
+
+
+/**
+ * Implements hook_permission().
+ *
+ * Valid permissions for this module.
+ *
+ * @return array
+ *   An array of valid permissions for the onthisdate module
+ */
+function delayed_ownership_permission() {
+  return array(
+    'use the delayed ownership' => array(
+      'title' => t('Use Delayed Ownership'),
+      'description' => t('Use Delayed Ownership for assigning anomymously created nodes to user'),
+    ),
+    'administer delayed ownership' => array(
+      'title' => t('Administer Delayed Ownership'),
+      'description' => t('Configure the Delayed Ownership settings'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_node_access().
+ *
+ * Node modules may implement node_access() to determine the operations
+ * users may perform on nodes. This example uses a very common access pattern.
+ */
+function delayed_ownership_node_access($node, $op, $account) {
+  return user_access('use the delayed ownership', $account);
+}
+
+/**
+ * Implements hook_theme().
+ *
+ * Defines the theming capabilities provided by this module.
+ */
+function delayed_ownership_theme($existing, $type, $theme, $path) {
+  return array(
+    'delayed_ownership_feedback' => array(
+      'render element' => 'form',
+      'template' => 'templates/delayed-ownership-feedback',
+    ),
+    'delayed_ownership_attributables' => array(
+      'template' => 'delayed-ownership-attributables',
+      'path' => drupal_get_path('module', 'delayed_ownership') . '/templates',
+      'type' => 'theme',
+      'variables' => array(
+        'title' => NULL,
+        'intro' => NULL,
+        'items' => NULL,
+      ),
+    ),
+    'delayed_ownership_attributables_item' => array(
+      'template' => 'delayed-ownership-attributables-item',
+      'path' => drupal_get_path('module', 'delayed_ownership') . '/templates',
+      'type' => 'theme',
+      'variables' => array(
+        'entityclass' => null,
+        'label' => null,
+        'title' => null,
+        'time' => null,
+        'timeclass' => null,
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_user_login().
+ *
+ * Upon login, set ownership of nodes created since max_minutes as anonymous
+ * user having the same session.
+ *
+ * @global $user
+ * @param  $op
+ * @param  $edit
+ * @param  $account
+ * @param  $category
+ */
+function delayed_ownership_user_login(&$edit, $account) {
+  // Get the previous session ID from the login form.
+  // This session ID must be saved by submitting it through the login form.
+  // The reason is that a successful login, creates a new session ID.
+  // TODO: Change whole code to using cookies and remove unnecessary lines.
+  $old_session_id = '';
+  if (isset($edit['old_session_id'])) {
+    // @todo: Do we ever get into this IF branch?
+    $old_session_id = $edit['old_session_id'];
+  }
+  else {
+    // If the registration link was used, the form variable can't be used.
+    // Instead, a cookie saves the old session_id.
+    if (isset($_COOKIE['delayed_ownership_old_session_id'])) {
+      $user_hash = $_COOKIE['delayed_ownership_old_session_id'];
+      _delayed_ownership_assign_entities($user_hash);
+    }
+  }
+}
+
+/**
+ * Find nodes that were created in a given session and assign username.
+ *
+ * @param string $user_hash
+ *   Hashed session id in which the nodes were created
+ */
+function _delayed_ownership_assign_entities($user_hash) {
+  // Use the global user object to find out the current uid.
+  global $user;
+
+  $entity_types = array('node', 'comment');
+  $entity_plurals = array(
+    'node' => t('nodes'),
+    'comment' => t('comments'),
+  );
+  // Search all nodes
+  // - that have the same hash value as the current user has
+  // - which have no author yet
+  $entity_types = _delayed_ownership_entities($entity_types, $user_hash);
+
+  foreach ($entity_types as $entity_type => $entities) {
+    $entity_ids = array();
+    $entity_titles = array();
+    foreach ($entities as $id => $entity) {
+      // Assign me as an author.
+      $entity->uid = $user->uid;
+      if ($entity_type == 'comment') {
+        $entity->name = $user->name;
+        $entity->registered_name = $user->name;
+      }
+      $entity_ids[$id] = $id;
+      if (isset($entity->title)) {
+        $entity_titles[$id] = $entity->title;
+      }
+      else if (isset($entity->subject)) {
+        $entity_titles[$id] = $entity->subject;
+      }
+      entity_save($entity_type, $entity);
+      _delayed_ownership_entity_delete($entity_type, $id);
+    }
+
+    // Log & give smart feedback.
+    $count = count($entities);
+    if ($count > 0) {
+
+      $tokens = array(
+        '!nids' => _delayed_ownership_implode($entity_ids),
+        '!titles' => _delayed_ownership_implode($entity_titles),
+        '@type' => t($entity_type),
+        '@types' => $entity_plurals[$entity_type],
+        '@name' => $user->name,
+        '@uid' => $user->uid,
+      );
+
+      // Log as watchdog message.
+      if ($count == 1) {
+        $message = 'Set author of @type !nids (!titles) to @name (uid @uid)';
+      }
+      else {
+        $message = 'Set author of @types !nids (!titles) to @name (uid @uid)';
+      }
+      watchdog('delayed_ownership', $message, $tokens);
+
+      // Display a status message to the user.
+      $message = format_plural($count,
+        'Authorship of @type !titles was transferred to you.',
+        'Authorship of @types !titles was transferred to you.',
+        $tokens);
+      drupal_set_message($message);
+    }
+    else {
+      // No item assignable: Something went wrong.
+      $tokens = array(
+        '@types' => $entity_plurals[$entity_type],
+        '@name' => $user->name,
+        '@uid' => $user->uid,
+      );
+      watchdog(
+        'delayed_ownership',
+        "Assignment of @name's guest @types failed (user @uid).",
+        $tokens,
+        WATCHDOG_ERROR
+      );
+    }
+  }
+}
+
+
+/**
+ * Get entities stored for delayed ownership by entity type or user hash.
+ *
+ * @author Marco Rademacher <rademacher@zebralog.de>
+ *
+ * @param $entity_types
+ *   array of strings representing entity types 'node' or 'comment'.
+ *   Defaults to array('node', 'comment').
+ * @param $user_hash
+ *   string of the user hash made of ip address and session id.
+ *   If ommitted, all entities of requested entity types we be returned.
+ * @return array of entity types containing arrays of fully loaded entities
+ *   that are ready for delayed ownership.
+ */
+function _delayed_ownership_entities($entity_types = array('node', 'comment'), $user_hash = '') {
+
+  if (!isset($entity_types) || empty($entity_types)) {
+    $entity_types = array('node', 'comment');
+  }
+  $entities = array();
+  $query = "SELECT d.entity_id FROM {delayed_ownership} d
+      WHERE d.entity_type = :entitytype";
+  if (!empty($user_hash)) {
+    $query .= " AND d.user_hash = :userhash";
+  }
+  foreach ($entity_types as $entity_type) {
+    $result = db_query($query, array(
+        ':entitytype' => $entity_type,
+        ':userhash' => $user_hash,
+      )
+    );
+    $entity_ids = array();
+    foreach ($result as $do_item) {
+      $entity_ids[] = $do_item->entity_id;
+    }
+    if (count($entity_ids) > 0) {
+      $entities[$entity_type] = entity_load($entity_type, $entity_ids);
+    }
+  }
+
+  return $entities;
+}
+
+/**
+ * Implements hook_form_alter().
+ *
+ * - Save current session_id in hidden field on login forms
+ * - Save current session_id in cookie during registration and password reset
+ * - If user registers via user_login_block, redirect him to the current page
+ *   after registration
+ */
+function delayed_ownership_form_alter(&$form, $form_state, $form_id) {
+
+  if (user_is_anonymous()) {
+    foreach (node_type_get_names() as $type => $name) {
+      if (($form_id == $type . '_node_form') && variable_get('delayed_ownership_nodetype_' . $type, TRUE)) {
+        $form['buttons']['submit']['#value'] = t('Send');
+        // Attach own redirect handler.
+        $form['actions']['submit']['#submit'][] = '_delayed_ownership_entity_form_submit';
+      }
+      // Enable delayed ownership for comments if activated
+      // @ToDo: Enable special configuration for this
+      if (($form_id == 'comment_node_' . $type . '_form') && variable_get('delayed_ownership_comments', TRUE)) {
+        // Attach own redirect handler
+        $form['#submit'][] = '_delayed_ownership_entity_form_submit';
+      }
+    }
+  }
+
+  // Set new submit function for user_pass_reset form to save old_session_id in
+  // a cookie.
+  if ($form_id == 'user_pass_reset') {
+    // We need to unset #action in order to execute our new submit function.
+    unset($form['#action']);
+    $form['#submit'][] = '_delayed_ownership_user_pass_reset_submit';
+  }
+
+  // If user registers via user_login_block,
+  // redirect him after registration to the current page.
+  if ($form_id == 'user_login_block') {
+
+    $items = array();
+    if (variable_get('user_register', 1)) {
+      $items[] = l(t('Create new account'), 'user/register', array(
+          'attributes' => array('title' => t('Create a new user account.')),
+          'query' => drupal_get_destination(),
+          ));
+    }
+    $items[] = l(t('Request new password'), 'user/password', array(
+        'attributes' => array('title' => t('Request new password via e-mail.')),
+        'query' => drupal_get_destination(),
+        ));
+    $form['links'] = array('#markup' => theme('item_list', array('items' => $items)));
+  }
+}
+
+
+/**
+ * Redirect to custom feedback page on node form submit.
+ *
+ * Implements form submit callback handler.
+ *
+ * @param $form
+ * @param $form_state
+ */
+function _delayed_ownership_entity_form_submit($form, &$form_state) {
+
+  if ($form['#id'] == 'comment-form') {
+    $redirect = variable_get('delayed_ownership_comments_page', DELAYED_OWNERSHIP_FEEDBACK_PAGE);
+  }
+  else if (substr($form['#id'], -10, 10) == '-node-form') {
+    $redirect = variable_get('delayed_ownership_nodetype_' . $form_state['values']['type'] . '_page', DELAYED_OWNERSHIP_FEEDBACK_PAGE);
+  }
+
+  // Empty string means no redirect. If set, redirect to the given Drupal path.
+  if (!empty($redirect)) {
+    $form_state['redirect'] = $redirect;
+  }
+}
+
+
+/**
+ * Submit function for user_pass_reset form.
+ *
+ * Save the old session id to the user object and
+ * call the usual user_pass_reset-login-url to keep the original login process.
+ *
+ * @param array $form
+ * @param type $form_state
+ */
+function _delayed_ownership_user_pass_reset_submit($form, &$form_state) {
+  global $user;
+
+  // Write current session id into a new cookie.
+  // Cookie lifetime is same as max exchange duration.
+  $minutes = (int) variable_get('delayed_ownership_max_minutes', DELAYED_OWNERSHIP_MAX_MINUTES);
+
+  setcookie('delayed_ownership_old_session_id', md5(ip_address() . session_id()), time() + $minutes * 60, '/');
+
+  // Save parameters to set the redirection path correctly.
+  if ((arg(0) == "user") && (arg(1) == "reset") && is_numeric(arg(2)) && is_numeric(arg(3))) {
+    $uid = arg(2);
+    $timestamp = arg(3);
+    $hashed_pass = arg(4);
+  }
+
+  $url = url("user/reset/$uid/$timestamp/$hashed_pass/login", array('absolute' => TRUE));
+  drupal_goto($url);
+}
+
+
+/**
+ * Implements hook_node_insert().
+ *
+ * As a new node is being inserted into the database, we need to do our own
+ * database inserts and lead user to feedback page (with destination to return).
+ */
+function delayed_ownership_node_insert($node) {
+  // Make sure that
+  // a) we have an anonymous user
+  // b) it's only a node type which is allowed for delayed ownership.
+  // @todo something seems to be buggy here, in our project we did a workaround
+  if (user_is_anonymous() && variable_get('delayed_ownership_nodetype_' . $node->type, TRUE)) {
+    $user_hash = md5(ip_address() . session_id());
+
+    // Set cookie to remember the current session ID.
+    // Cookie lifetime is same as max exchange duration.
+    $minutes = (int) variable_get('delayed_ownership_max_minutes', DELAYED_OWNERSHIP_MAX_MINUTES);
+    setcookie('delayed_ownership_old_session_id', $user_hash, time() + $minutes * 60, '/');
+
+    db_insert('delayed_ownership')
+      ->fields(array(
+        'entity_type' => 'node',
+        'entity_id' => $node->nid,
+        'vid' => $node->vid,
+        'user_hash' => $user_hash,
+        ))
+      ->execute();
+
+    // Move to feedback page. Set current page as destination to return here.
+    $node_type = node_type_get_name($node);
+    $interval = variable_get('delayed_ownership_max_minutes', DELAYED_OWNERSHIP_MAX_MINUTES) * 60;
+
+    // Display to user if this is configured
+    if (variable_get('delayed_ownership_nodetype_' . $node->type . '_message', false)) {
+      drupal_set_message(t('Anonymously saved @type "@title". We can set the authorship of your @type if you !login during the next @interval. If you need an account, please !register first. !more', array(
+          '@title' => $node->title,
+          '@type' => $node_type,
+          '@interval' => format_interval($interval, 1),
+          '!login' => l(t('login'), 'user/login'),
+          '!register' => l(t('register'), 'user/register'),
+          '!more' => l(t('More information'), DELAYED_OWNERSHIP_FEEDBACK_PAGE),
+      )));
+    }
+  }
+}
+
+
+/**
+ * Implements hook_comment_insert().
+ *
+ * As a new comment is being inserted into the database, we need to do our own
+ * database inserts and lead user to feedback page (with destination to return).
+ */
+function delayed_ownership_comment_insert($comment) {
+  // Make sure that
+  // a) we have an anonymous user
+  // b) it's only a node type which is allowed for delayed ownership.
+  // @todo something seems to be buggy here, in our project we did a workaround
+  if (user_is_anonymous() && variable_get('delayed_ownership_comments', TRUE)) {
+    $user_hash = md5(ip_address() . session_id());
+
+    // Set cookie to remember the current session ID.
+    // Cookie lifetime is same as max exchange duration.
+    $minutes = (int) variable_get('delayed_ownership_max_minutes', DELAYED_OWNERSHIP_MAX_MINUTES);
+    setcookie('delayed_ownership_old_session_id', $user_hash, time() + $minutes * 60, '/');
+
+    db_insert('delayed_ownership')
+      ->fields(array(
+        'entity_type' => 'comment',
+        'entity_id' => $comment->cid,
+        'vid' => 0,
+        'user_hash' => $user_hash,
+        ))
+      ->execute();
+
+    // Move to feedback page. Set current page as destination to return here.
+    $type = t('comment');
+    $interval = variable_get('delayed_ownership_max_minutes', DELAYED_OWNERSHIP_MAX_MINUTES) * 60;
+
+    // Display to user if this is configured
+    if (variable_get('delayed_ownership_comments_message', false)) {
+      drupal_set_message(t('Anonymously saved @type "@title". We can set the authorship of your @type if you !login during the next @interval. If you need an account, please !register first. !more', array(
+          '@title' => $comment->subject,
+          '@type' => $type,
+          '@interval' => format_interval($interval, 2),
+          '!login' => l(t('login'), 'user/login'),
+          '!register' => l(t('register'), 'user/register'),
+          '!more' => l(t('More information'), DELAYED_OWNERSHIP_FEEDBACK_PAGE),
+      )));
+    }
+  }
+}
+
+
+/**
+ * Delete node from delayed_ownership records.
+ *
+ * @param object $node
+ *   Node object containing at least nid attribute
+ */
+function _delayed_ownership_entity_delete($entity_type, $entity_id) {
+  // Delete the node from the delayed ownership table.
+  db_delete('delayed_ownership')
+    ->condition('entity_type', $entity_type)
+    ->condition('entity_id', $entity_id)
+    ->execute();
+}
+
+
+/**
+ * Implements hook_cron().
+ *
+ * Delete all outdated delayed_ownership entries from db.
+ */
+function delayed_ownership_cron() {
+
+  // Collect outdated nodes and comments
+  $entity_types = array('node', 'comment');
+  $maxseconds = variable_get('delayed_ownership_max_minutes', DELAYED_OWNERSHIP_MAX_MINUTES) * 60;
+  foreach ($entity_types as $entity_type) {
+    if ($entity_type == 'node') {
+      $query = "SELECT d.entity_id, n.title AS title FROM {delayed_ownership} d, {node} n
+        WHERE d.entity_type = 'node'
+        AND d.entity_id = n.nid
+        AND d.vid = n.vid
+        AND (UNIX_TIMESTAMP() - created) > :maxseconds";
+    }
+    else if ($entity_type == 'comment') {
+      $query = "SELECT d.entity_id, c.subject AS title FROM {delayed_ownership} d, {comment} c
+        WHERE d.entity_type = 'comment'
+        AND d.entity_id = c.cid
+        AND (UNIX_TIMESTAMP() - created) > :maxseconds";
+    }
+    $result = db_query($query, array(':maxseconds' => $maxseconds));
+
+    // Delete nodes and comments from delayed_ownership table
+    // and prepare a log message.
+    $deleted = array();
+    foreach ($result as $row) {
+      $entity_id = $row->entity_id;
+      _delayed_ownership_entity_delete($entity_type, $entity_id);
+      $link = $entity_type . '/' . $entity_id . '/edit';
+      $options = array('attributes' => array('title' => $row->title));
+      $deleted[$entity_id] = l('#' . $entity_id, $link, $options);
+    }
+
+    // Write a message to Drupal log.
+    $count = count($deleted);
+    if ($count > 0) {
+      $tokens = array(
+        '@count' => $count,
+        '@type' => $entity_type,
+        '%title' => $row->title,
+      );
+      $link = t('Edit !links', array('!links' => implode(', ', $deleted)));
+      if ($count == 1) {
+        $message = '@type %title has been pruned from delayed ownership table.';
+      }
+      else {
+        $message = '@count @type items have been pruned from delayed ownership table.';
+      }
+      watchdog('delayed_ownership', $message, $tokens, WATCHDOG_NOTICE, $link);
+    }
+  }
+}
+
+
+/**
+ * Implements hook_block_info().
+ */
+function delayed_ownership_block_info() {
+  $blocks['attributables'] = array(
+    'info' => t('Attributable guest contributions'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function delayed_ownership_block_view($delta = 'attributables') {
+
+  // Get all nodes and comments the user has submitted as a guest with
+  // the current ip address in the current session.
+  $user_hash = md5(ip_address() . session_id());
+  $entity_types = _delayed_ownership_entities(null, $user_hash);
+
+  // build the list of titles that are preseded with a label
+  // explaining the type of content
+  $items = array();
+  foreach ($entity_types as $entity_type => $entities) {
+    foreach ($entities as $entity) {
+
+      // Get title and entity information
+      if ($entity_type == 'node') {
+        $label = filter_xss_admin(node_type_get_name($entity));
+        $title = check_plain($entity->title);
+      }
+      else if ($entity_type == 'comment') {
+        $label = t('Comment');
+        $title = check_plain($entity->subject);
+      }
+
+      if (isset($label)) {
+        $label = t('@label: ', array('@label' => $label));
+      }
+      else {
+        $label = '';
+      }
+
+      // Calculate the remaining time for delayed ownership
+      if (isset($entity->created)) {
+        $interval = $entity->created + (variable_get('delayed_ownership_max_minutes', DELAYED_OWNERSHIP_MAX_MINUTES) * 60) - time();
+        if (isset($interval)) {
+          if ($interval > 0) {
+            $time = t('(@time left to login)', array('@time' => format_interval($interval, $granularity = 1)));
+            $timeclass = ($interval > 600) ? 'do-time-ok' : 'do-time-urgent';
+          }
+          else {
+            $time = t('(expiring)');
+            $timeclass = 'do-time-expiring';
+          }
+        }
+      }
+
+      // Theme the item
+      $variables = array(
+        'entityclass' => drupal_clean_css_identifier($entity_type),
+        'label' => $label,
+        'title' => $title,
+        'time' => $time,
+        'timeclass' => $timeclass,
+      );
+      $items[] = theme('delayed_ownership_attributables_item', $variables);
+    }
+  }
+
+  // When there is nothing to be owned, do not display this block.
+  if (count($items) == 0) {
+    return;
+  };
+
+  $title = t('Your contributions');
+  $intro = t('These contributions are assigned to you after you log in:');
+
+  $variables = array(
+    'title' => $title,
+    'intro' => $intro,
+    'items' => $items,
+  );
+
+  $block['subject'] = $title;
+  $block['content'] = theme('delayed_ownership_attributables', $variables);
+  return $block;
+}
+
+/**
+ * Page that is shown after an anonymous user created a node whose ownership can
+ * be set delayed.
+ *
+ * @return string
+ *   Rendered feedback page.
+ */
+function delayed_ownership_feedback_page() {
+
+  // Use current destination query in links. Link to default page otherwise.
+  if (isset($_REQUEST['destination'])) {
+    $destination = check_plain(urldecode($_REQUEST['destination']));
+  }
+  else {
+    $destination = variable_get('delayed_ownership_destination', DELAYED_OWNERSHIP_DESTINATION);
+  }
+
+  $register = filter_xss_admin(variable_get('delayed_ownership_feedback_register',
+    _delayed_ownership_defaults('register')));
+  $login = filter_xss_admin(variable_get('delayed_ownership_feedback_login', _delayed_ownership_defaults('login')));
+  $dontregister = filter_xss_admin(variable_get('delayed_ownership_feedback_cancel',
+    _delayed_ownership_defaults('dontregister')));
+
+  $output = theme('delayed_ownership_feedback', array(
+    'register' => $register,
+    'login' => $login,
+    'dontregister' => $dontregister,
+    'destination' => $destination,
+  ));
+
+  return $output;
+}
+
+/**
+ * Edit page that exposes the part from the global delayed ownership settings
+ * form that ist relevant for the conent of the feedback page.
+ *
+ * @author Marco Rademacher <rademacher@zebralog.de>
+ * @return string
+ *   Rendered feedback edit page.
+ */
+function delayed_ownership_feedback_page_settings() {
+
+  drupal_set_title(t('Delayed ownership feedback'));
+  $settings_form = delayed_ownership_settings();
+  $form = $settings_form['feedback'];
+  foreach (array_keys($form) as $key) {
+    if (strpos($key, '#') === 0) {
+      unset($form[$key]);
+    }
+  }
+  $form = system_settings_form($form);
+  $form['#submit'][] = 'delayed_ownership_feedback_page_settings_submit';
+
+  return $form;
+}
+
+/**
+ * Submit function that adds a redirect to the feedback page after
+ * delayed_ownership_feedback_page_settings have been edited.
+ *
+ * @author Marco Rademacher <rademacher@zebralog.de>
+ * @param $form
+ * @param $form_state
+ */
+function delayed_ownership_feedback_page_settings_submit($form, &$form_state) {
+  $form_state['redirect'] = array(DELAYED_OWNERSHIP_FEEDBACK_PAGE);
+}
+
+/**
+ * System settings form on admin settings page, accessible only by admins via
+ * menu access restriction.
+ *
+ * - Set interval for which node ownership can be reconstructed in minutes.
+ * - Set types of nodes that may have delayed owndership
+ * - Adjust texts on the feedback page to introduce the choice between
+ *   registration, login and proceeding without registration.
+ *
+ * For conditional visibilty in forms
+ * @see https://api.drupal.org/api/drupal/includes%21common.inc/function/drupal_process_states/7
+ *
+ * @return array
+ *   System settings form
+ */
+function delayed_ownership_settings() {
+
+  $form = array();
+  $form['general'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('General'),
+    '#collapsible' => TRUE);
+  $form['general']['delayed_ownership_max_minutes'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Max age in minutes'),
+    '#default_value' => variable_get('delayed_ownership_max_minutes', DELAYED_OWNERSHIP_MAX_MINUTES),
+    '#size' => '4',
+    '#maxlength' => 4,
+    '#description' => t('Maximum time between the creation of a node and the next user login.'),
+  );
+  $form['general']['delayed_ownership_destination'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default destination'),
+    '#default_value' => variable_get('delayed_ownership_destination', DELAYED_OWNERSHIP_DESTINATION),
+    '#description' => t('Default page to direct to if feedback page is called without destination.'),
+  );
+
+  if ($node_types = node_type_get_names()) {
+    $form['types'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Node types delayed ownership is used for'),
+      '#description' => t('Enable or disable the <em>delayed ownership functionality</em> for following node types.'),
+      '#collapsible' => TRUE,
+    );
+
+    foreach ($node_types as $type => $name) {
+      $default = TRUE;
+      $form['types']['delayed_ownership_nodetype_' . $type] = array(
+        '#type' => 'checkbox',
+        '#title' => check_plain($name),
+        '#default_value' => (int) filter_xss_admin(variable_get('delayed_ownership_nodetype_' . $type, $default)),
+      );
+      $form['types']['delayed_ownership_nodetype_' . $type . '_settings'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Settings for @name', array('@name' => $name)),
+        '#collapsible' => false,
+        '#states' => array(
+          // Only show this field when the 'delayed_ownership_nodetype_$type' checkbox is enabled.
+          'visible' => array(
+            ':input[name="delayed_ownership_nodetype_' . $type . '"]' => array('checked' => TRUE),
+          ),
+        ),
+      );
+      $form['types']['delayed_ownership_nodetype_' . $type . '_settings']['delayed_ownership_nodetype_' . $type . '_message'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Show a status message after guest @name creation', array('@name' => $name)),
+        '#default_value' => (int) filter_xss_admin(variable_get('delayed_ownership_nodetype_' . $type . '_message', false)),
+        '#description' => t('Enable the status message if you don\'t use the default follow up page for feedback:')
+          . '<br /><em>'
+          . t('Anonymously saved @type "@title". We can set the authorship of your @type if you !login during the next @interval. If you need an account, please !register first. !more', array(
+          '@title' => '<tt>title</tt>',
+          '@type' => '<tt>type</tt>',
+          '@interval' => format_interval(variable_get('delayed_ownership_max_minutes', DELAYED_OWNERSHIP_MAX_MINUTES) * 60, 1),
+          '!login' => l(t('login'), 'user/login'),
+          '!register' => l(t('register'), 'user/register'),
+          '!more' => l(t('More information'), DELAYED_OWNERSHIP_FEEDBACK_PAGE),
+        )) . '</em>' ,
+        '#states' => array(
+          'visible' => array(
+            ':input[name="delayed_ownership_nodetype_' . $type . '"]' => array('checked' => TRUE),
+          ),
+        ),
+      );
+      $form['types']['delayed_ownership_nodetype_' . $type . '_settings']['delayed_ownership_nodetype_' . $type . '_page'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Follow up page'),
+        '#default_value' => filter_xss_admin(variable_get('delayed_ownership_nodetype_' . $type . '_page', DELAYED_OWNERSHIP_FEEDBACK_PAGE)),
+        '#description' => t('Drupal path of the feedback page to show after guest @name creation. Default is !feedbackpage. Leave blank for no redirect.', array(
+          '@name' => $name,
+          '!feedbackpage' => l(DELAYED_OWNERSHIP_FEEDBACK_PAGE, DELAYED_OWNERSHIP_FEEDBACK_PAGE),
+        )),
+        '#states' => array(
+          'visible' => array(
+            ':input[name="delayed_ownership_nodetype_' . $type . '"]' => array('checked' => TRUE),
+          ),
+        ),
+      );
+    }
+  }
+
+  $form['comments'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Delayed comment ownership'),
+    '#description' => t('Enable or disable the <em>delayed ownership functionality</em> for comments.'),
+    '#collapsible' => TRUE);
+  $default = TRUE;
+  $name = t('comment');
+  $form['comments']['delayed_ownership_comments'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Comments'),
+    '#default_value' => (int) filter_xss_admin(variable_get('delayed_ownership_comments', $default)),
+  );
+  $form['comments']['delayed_ownership_comments_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Settings for @name', array('@name' => $name)),
+    '#collapsible' => false,
+    '#states' => array(
+      'visible' => array(
+        ':input[name="delayed_ownership_comments"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+  $form['comments']['delayed_ownership_comments_settings']['delayed_ownership_comments_message'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show a status message after guest @name creation', array('@name' => $name)),
+    '#default_value' => (int) filter_xss_admin(variable_get('delayed_ownership_comments_message', false)),
+    '#description' => t('Enable the status message if you don\'t use the default follow up page for feedback:')
+      . '<br /><em>'
+      . t('Anonymously saved @type "@title". We can set the authorship of your @type if you !login during the next @interval. If you need an account, please !register first. !more', array(
+      '@title' => '<tt>title</tt>',
+      '@type' => '<tt>type</tt>',
+      '@interval' => format_interval(variable_get('delayed_ownership_max_minutes', DELAYED_OWNERSHIP_MAX_MINUTES) * 60, 1),
+      '!login' => l(t('login'), 'user/login'),
+      '!register' => l(t('register'), 'user/register'),
+      '!more' => l(t('More information'), DELAYED_OWNERSHIP_FEEDBACK_PAGE),
+    )) . '</em>' ,
+    '#states' => array(
+      'visible' => array(
+        ':input[name="delayed_ownership_comments"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+  $form['comments']['delayed_ownership_comments_settings']['delayed_ownership_comments_page'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Follow up page'),
+    '#default_value' => filter_xss_admin(variable_get('delayed_ownership_comments_page', DELAYED_OWNERSHIP_FEEDBACK_PAGE)),
+    '#description' => t('Drupal path of the feedback page to show after guest @name creation. Default is !feedbackpage. Leave blank for no redirect.', array(
+      '@name' => $name,
+      '!feedbackpage' => l(DELAYED_OWNERSHIP_FEEDBACK_PAGE, DELAYED_OWNERSHIP_FEEDBACK_PAGE),
+    )),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="delayed_ownership_comments"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
+  $form['feedback'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Default follow up page'),
+    '#description' => t('The page !feedbackpage appears after an anonymous user created content. The page explains the options to proceed and proposes to create a user account. Enter convincing arguments here.',
+      array(
+        '!feedbackpage' => l(DELAYED_OWNERSHIP_FEEDBACK_PAGE, DELAYED_OWNERSHIP_FEEDBACK_PAGE),
+      )),
+    '#collapsible' => TRUE,
+  );
+  $sections = array(
+    'register' => array(
+      '#description' => t('Text that teasers moving to registration.'),
+      '#rows' => 12,
+    ),
+    'login' => array(
+      '#description' => t('Text that teasers moving to login.'),
+      '#rows' => 6,
+    ),
+    'cancel' => array(
+      '#description' => t('Explaination of the destination of cancel.'),
+      '#rows' => 6,
+    ),
+  );
+  foreach ($sections as $section => $data) {
+    $form['feedback']['delayed_ownership_feedback_' . $section] = array(
+      '#type' => 'textarea',
+      '#title' => t(ucfirst($section) . ' teasertext'),
+      '#default_value' => filter_xss_admin(variable_get('delayed_ownership_feedback_' . $section, _delayed_ownership_defaults($section))),
+      '#rows' => $data['#rows'],
+      '#description' => $data['#description'],
+    );
+    // @ToDo: Explain button text & action in UI
+  }
+
+  return system_settings_form($form);
+}
+
+/**
+ * Default texts for text variables that build the feedback page.
+ *
+ * @param string $id
+ *   Id of the default text.
+ * @return string
+ */
+function _delayed_ownership_defaults($id) {
+  // TODO: Provide handy text defaults.
+  switch ($id) {
+    case 'register':
+      return 'Register default text';
+
+    case 'login':
+      return 'Login default text';
+
+    case 'dontregister':
+      return 'Dontregister default text';
+  }
+}
+
+
+/**
+ * Helper function to give a more naturally readable string output of an array
+ * of string items.
+ *
+ * @param $array
+ *   The array strings that should become a naturally readable string.
+ * @param $last_seperator
+ *   The seperator of the last item. Conjunction " and " by default.
+ *   This parameter can also be changed by translation system.
+ * @param $other_seperator
+ *   The usaul seperator. Comma ", " by default. This parameter can also be
+ *   changed by translation system.
+ * @param $embrace
+ *   Embrace each item with a prefix and a suffix. "<em>@value</em>" by default.
+ * @return string
+ */
+function _delayed_ownership_implode($array, $last_seperator = ' and ', $other_seperator = ', ',  $embrace = '<em>@value</em>') {
+
+  // Inclose each element with prefix and suffix
+  foreach ($array as &$value) {
+    $value = t($embrace, array('@value' => $value));
+  }
+
+  // Seperate items by commas, seperate last item with "and".
+  $last  = array_slice($array, -1);
+  $first = join(t($other_seperator), array_slice($array, 0, -1));
+  $both  = array_filter(array_merge(array($first), $last));
+
+  return join(t($last_seperator), $both);
+}

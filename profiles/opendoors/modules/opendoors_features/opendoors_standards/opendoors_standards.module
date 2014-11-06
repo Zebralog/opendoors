@@ -1,0 +1,54 @@
+<?php
+/**
+ * @file
+ * Code for the Zebra standards feature.
+ */
+
+include_once 'opendoors_standards.features.inc';
+
+
+/**
+ * Remove some basic links and set others
+ * 
+ * @global type $user
+ * @param string $path
+ * @param type $original_path
+ * @param type $path_language
+ */
+function opendoors_standards_url_inbound_alter(&$path, $original_path, $path_language) {
+  // Disable /node freakshow, if it is not the frontpage
+  if ((variable_get('site_frontpage', 'node') !== 'node') && ($path == 'node')) {
+    $path = '';
+  }
+
+  // Create the path user/me/edit, which allows a user to edit their account.
+  //if (preg_match('|^user/me/edit(/.*)?|', $path, $matches)) {
+  //  global $user;
+  //  $path = 'user/' . $user->uid . '/edit' . $matches[1];
+  //}
+}
+
+
+/**
+ * Zebra standards API function to be used in other zebralog modules.
+ * Puts a "required fields" notice directly on top of the submit buttons.
+ *
+ * @author Marco Rademacher <rademacher@zebralog.de>
+ *
+ * @param $form array
+ * @return $form array
+ */
+function opendoors_standards_set_required_field_notice ($form) {
+
+  // put required fields notice directly on top of submit buttons
+  $notice = '';
+  if (isset($form['actions']['#prefix'])) {
+    $notice = $form['actions']['#prefix'];
+  }
+  $notice .= '<div class="zebra-notice-required">';
+  $notice .= t('Angaben mit (!star) sind Pflichtfelder', array('!star' => '<span class="form-required">*</span>'));
+  $notice .= '</div>';
+  $form['actions']['#prefix'] = $notice;
+
+  return $form;
+}

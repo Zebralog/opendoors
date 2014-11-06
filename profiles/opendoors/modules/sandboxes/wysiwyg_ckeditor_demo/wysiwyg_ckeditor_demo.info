@@ -1,0 +1,22 @@
+name = WYSIWYG CKEditor demo
+core = 7.x
+package = Features
+dependencies[] = ckeditor_link
+dependencies[] = features
+dependencies[] = media
+dependencies[] = pathologic
+dependencies[] = wysiwyg
+dependencies[] = wysiwyg (>7.x-2.2)
+dependencies[] = wysiwyg_filter
+dependencies[] = wysiwyg_linebreaks
+features[features_api][] = api:2
+features[filter][] = wysiwyg
+features[wysiwyg][] = wysiwyg
+
+
+; Information added by drush on 2014-11-06
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "opendoors"
+datestamp = "1415291275"
+

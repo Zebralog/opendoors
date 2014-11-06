@@ -1,0 +1,97 @@
+name = Opendoors
+description = Opendoors is your own e-participation platform.
+
+core = 7.x
+dependencies[] = admin_menu
+dependencies[] = admin_menu_toolbar
+dependencies[] = filter_perms
+dependencies[] = ctools
+dependencies[] = page_manager
+dependencies[] = views_content
+dependencies[] = block
+dependencies[] = color
+dependencies[] = comment
+dependencies[] = contextual
+dependencies[] = dashboard
+dependencies[] = dblog
+dependencies[] = field
+dependencies[] = field_sql_storage
+dependencies[] = file
+dependencies[] = filter
+dependencies[] = help
+dependencies[] = image
+dependencies[] = list
+dependencies[] = locale
+dependencies[] = menu
+dependencies[] = node
+dependencies[] = number
+dependencies[] = options
+dependencies[] = overlay
+dependencies[] = path
+dependencies[] = rdf
+dependencies[] = search
+dependencies[] = system
+dependencies[] = taxonomy
+dependencies[] = text
+dependencies[] = user
+dependencies[] = features
+dependencies[] = wysiwyg_ckeditor_demo
+dependencies[] = computed_field
+dependencies[] = field_permissions
+dependencies[] = field_group
+dependencies[] = maxlength
+dependencies[] = pathologic
+dependencies[] = wysiwyg_filter
+dependencies[] = simplenews
+dependencies[] = file_entity
+dependencies[] = opendoors_discussion
+dependencies[] = opendoors_standards
+dependencies[] = opendoors_user_dashboard
+dependencies[] = auto_entitylabel
+dependencies[] = delayed_ownership
+dependencies[] = entity
+dependencies[] = exclude_node_title
+dependencies[] = libraries
+dependencies[] = module_filter
+dependencies[] = overlay_paths
+dependencies[] = overlay_paths_ui
+dependencies[] = pathauto
+dependencies[] = strongarm
+dependencies[] = token
+dependencies[] = transliteration
+dependencies[] = panels
+dependencies[] = registration_role
+dependencies[] = ckeditor_link
+dependencies[] = wysiwyg
+dependencies[] = wysiwyg_linebreaks
+dependencies[] = better_exposed_filters
+dependencies[] = views
+dependencies[] = views_infinite_scroll
+dependencies[] = rate
+dependencies[] = votingapi
+dependencies[] = user_links
+dependencies[] = stats_block
+dependencies[] = overlay_fix_scroll
+
+; Themes
+; dependencies[] = bartik
+; dependencies[] = seven
+; dependencies[] = opendoors_heat
+
+; Developer modules
+dependencies[] = field_ui
+dependencies[] = views_ui
+; dependencies[] = devel
+; dependencies[] = simplehtmldom
+; dependencies[] = l10n_client
+; dependencies[] = backup_migrate
+; dependencies[] = backup_migrate_files
+; dependencies[] = stage_file_proxy
+
+
+; Information added by drush on 2014-11-06
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "opendoors"
+datestamp = "1415291275"
+

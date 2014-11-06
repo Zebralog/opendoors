@@ -1,0 +1,167 @@
+<?php
+
+/**
+ * @file
+ * Install the delayed_ownership module, including it's content (node) type.
+ */
+
+/**
+ * Implements hook_schema().
+ * @return array
+ *   array of database schema API table definitions.
+ */
+function delayed_ownership_schema() {
+  $schema['delayed_ownership'] = array(
+    'fields' => array(
+      'entity_type' => array(
+        'description' => 'The entity type this data is attached to.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => 'node',
+      ),
+      'entity_id' => array(
+        'description' => 'The entitys primary identifier ({node}.nid  or {comment}.cid).',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'vid' => array(
+        'description' => 'The current {node_revisions}.vid version identifier or null, if this is not a node.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'user_hash' => array(
+        'description' => 'Hash generated from session ID and the IP-address of the anonymous user that created this node or comment.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('entity_type', 'entity_id', 'vid'),
+  );
+  return $schema;
+}
+
+
+/**
+ * New permissions for delayed ownership configuration page
+ */
+function delayed_ownership_update_7000() {
+  $message = 'Check <a href="@url">new permissions</a> for delayed ownership configuration page.';
+  $variables = array('@url' => base_path() . 'admin/people/permissions#module-delayed_ownership');
+  drupal_set_message(t($message, $variables));
+  watchdog('Delayed ownership', $message, $variables);
+}
+
+
+/**
+ * Correct old variable names.
+ */
+function delayed_ownership_update_7001() {
+
+  $wrong_variables = array();
+  $node_types = node_type_get_names();
+
+  // Move the content of the old variable names to the right variable names.
+  $count_wrong = 0;
+  foreach ($node_types as $type => $name) {
+    // Identify unset variables with an impossible value.
+    $status = variable_get('delayed_ownership_nodetype_' . $name, -1);
+    // Delete only set variables.
+    if ($status !== -1) {
+      variable_set('delayed_ownership_nodetype_' . $type, $status);
+      $count_wrong++;
+    }
+  }
+
+  // Assemble all delayed_ownership_nodetype_ variables for check if they should
+  // be removed.
+  $results = db_select('variable', 'v')
+    ->fields('v', array('name'))
+    ->condition('name', db_like('delayed_ownership_nodetype_') . '%', 'LIKE')
+    ->execute();
+
+  // Delete all variables made of node type names, if there es no identical name
+  // of the right variable
+  $count_del = 0;
+  foreach ($results as $result) {
+    $name = str_replace('delayed_ownership_nodetype_', '', $result->name);
+    if (!isset($node_types[$name])) {
+      variable_del('delayed_ownership_nodetype_' . $name);
+      $count_del++;
+    }
+  }
+
+  // Report success
+  $message = format_plural($count_wrong,
+    'One wrong delayed ownership variable name corrected.',
+    '@count wrong delayed ownership variable names corrected.'
+  );
+  $message .= ' ' . format_plural($count_del,
+    'One delayed ownership variable having no active node type have been deleted.',
+    '@count delayed ownership variables having no active node type have been deleted.'
+  );
+  if ($count_del > $count_wrong) {
+    $message .= ' ' . t('Please repeat the delayed ownerhip settings for node types that are currently deactivated after you activate them again.');
+  }
+  drupal_set_message($message);
+  watchdog('Delayed ownership', $message);
+}
+
+
+
+/**
+ * Enable support for delayed ownership of comments, too. Move from node to an entity approach.
+ */
+function delayed_ownership_update_7002() {
+
+  // ALTER TABLE  `delayed_ownership` ADD  `entity_type` VARCHAR(128) NOT NULL COMMENT  'The entity type this data is attached to.' FIRST ;
+  // UPDATE  `delayed_ownership` SET  `entity_type` =  'node';
+  // ALTER TABLE  `delayed_ownership` CHANGE  `nid`  `entity_id` INT(10) UNSIGNED NOT NULL DEFAULT '0' COMMENT  'The entitys primary identifier (nid for nodes or cid for comments).';
+  // ALTER TABLE  `delayed_ownership` CHANGE  `vid`  `vid` INT(10) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'The current node_revisions.vid version identifier or null, if this is not a node.';
+  // ALTER TABLE  `delayed_ownership` CHANGE  `user_hash`  `user_hash` VARCHAR(32) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT  '' COMMENT 'Hash generated from session ID and the IP-address of the anonymous user that created this node or comment.';
+
+  db_add_field('delayed_ownership', 'entity_type', array(
+    'description' => 'The entity type this data is attached to.',
+    'type' => 'varchar',
+    'length' => 128,
+    'not null' => TRUE,
+    'default' => 'node',
+  ));
+
+  db_change_field('delayed_ownership', 'nid', 'entity_id', array(
+    'description' => 'The entitys primary identifier ({node}.nid  or {comment}.cid).',
+    'type' => 'int',
+    'unsigned' => TRUE,
+    'not null' => TRUE,
+  ));
+
+  db_change_field('delayed_ownership', 'vid', 'vid', array(
+    'description' => 'The current {node_revisions}.vid version identifier or null, if this is not a node.',
+    'type' => 'int',
+    'unsigned' => TRUE,
+    'not null' => TRUE,
+    'default' => 0,
+  ));
+
+  db_change_field('delayed_ownership', 'user_hash', 'user_hash', array(
+    'description' => 'Hash generated from session ID and the IP-address of the anonymous user that created this node or comment.',
+    'type' => 'varchar',
+    'length' => 32,
+    'not null' => TRUE,
+    'default' => '',
+  ));
+
+  db_drop_primary_key('delayed_ownership');
+  db_add_primary_key('delayed_ownership', array('entity_type', 'entity_id', 'vid'));
+  
+  $message = 'Delayed ownership module now supports comments, too. The DB was updated to an entity approach.';
+  $variables = array();
+  drupal_set_message(t($message, $variables));
+  watchdog('Delayed ownership', $message, $variables);
+}
+

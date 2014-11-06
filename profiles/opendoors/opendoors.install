@@ -187,8 +187,8 @@ function opendoors_install() {
   
   // Enable default permissions for system roles.
   $filtered_html_permission = filter_permission_name($filtered_html_format);
-  user_role_grant_permissions(DRUPAL_ANONYMOUS_RID, array('access comments', 'access content', 'access overlay', 'create proposal content', 'post comments', 'skip comment approval', 'subscribe to newsletters', 'use exclude node title', 'view field_municipal_response', 'view field_municipal_response_author', 'view field_municipal_response_date', 'view field_municipal_response_image', 'view field_recommended', 'view files', 'view own field_municipal_response', 'view stats block', $filtered_html_permission));
-  user_role_grant_permissions(DRUPAL_AUTHENTICATED_RID, array('access comments', 'access content', 'access overlay', 'create proposal content', 'post comments', 'skip comment approval', 'subscribe to newsletters', 'view field_municipal_response', 'view field_municipal_response_author', 'view field_municipal_response_date', 'view field_municipal_response_image', 'view field_recommended', 'view files', 'view own field_municipal_response', 'view stats block', 'vote on proposals', $filtered_html_permission));
+  user_role_grant_permissions(DRUPAL_ANONYMOUS_RID, array('access comments', 'access content', 'access overlay', 'create proposal content', 'post comments', 'skip comment approval', 'subscribe to newsletters', 'use exclude node title', 'view field_municipal_response', 'view field_municipal_response_author', 'view field_municipal_response_date', 'view field_municipal_response_image', 'view field_recommended', 'view own field_municipal_response', 'view stats block', $filtered_html_permission));
+  user_role_grant_permissions(DRUPAL_AUTHENTICATED_RID, array('access comments', 'access content', 'access overlay', 'create proposal content', 'post comments', 'skip comment approval', 'subscribe to newsletters', 'view field_municipal_response', 'view field_municipal_response_author', 'view field_municipal_response_date', 'view field_municipal_response_image', 'view field_recommended', 'view own field_municipal_response', 'view stats block', 'vote on proposals', $filtered_html_permission));
   
   // Create a default role for site administrators, with all available permissions assigned.
   $admin_role = new stdClass();
@@ -202,13 +202,13 @@ function opendoors_install() {
   $citizen_role = new stdClass();
   $citizen_role->name = 'Citizen';
   user_role_save($citizen_role);
-  user_role_grant_permissions($citizen_role->rid, array( 'use exclude node title', 'edit field_municipal_response_image', 'view files' ));
+  user_role_grant_permissions($citizen_role->rid, array( 'use exclude node title', 'edit field_municipal_response_image' ));
   
   // TODO: Set the right permissions
   $moderator_role = new stdClass();
   $moderator_role->name = 'Moderator';
   user_role_save($moderator_role);
-  user_role_grant_permissions($moderator_role->rid, array('access administration menu', 'access administration pages', 'access ckeditor link', 'access content overview', 'access contextual links', 'administer comments', 'administer delayed ownership', 'administer taxonomy', 'create field_municipal_response', 'create field_municipal_response_author', 'create field_municipal_response_date', 'create field_recommended', 'create page content', 'create pane_embedded content', 'create url aliases', 'delete any page content', 'delete any proposal content', 'delete terms in 2', 'edit any page content', 'edit any pane_embedded content', 'edit any proposal content', 'edit field_municipal_response', 'edit field_municipal_response_author', 'edit field_municipal_response_date', 'edit field_municipal_response_image', 'edit field_recommended', 'edit own field_municipal_response_author', 'edit own field_municipal_response_date', 'edit terms in 2', 'translate interface', 'use text format full_html', 'use text format wysiwyg', 'view files', 'view own field_municipal_response_author', 'view own field_municipal_response_date', 'view the administration theme', ));
+  user_role_grant_permissions($moderator_role->rid, array('access administration menu', 'access administration pages', 'access ckeditor link', 'access content overview', 'access contextual links', 'administer comments', 'administer delayed ownership', 'administer taxonomy', 'create field_municipal_response', 'create field_municipal_response_author', 'create field_municipal_response_date', 'create field_recommended', 'create page content', 'create pane_embedded content', 'create url aliases', 'delete any page content', 'delete any proposal content', 'delete terms in 2', 'edit any page content', 'edit any pane_embedded content', 'edit any proposal content', 'edit field_municipal_response', 'edit field_municipal_response_author', 'edit field_municipal_response_date', 'edit field_municipal_response_image', 'edit field_recommended', 'edit own field_municipal_response_author', 'edit own field_municipal_response_date', 'edit terms in 2', 'translate interface', 'use text format full_html', 'use text format wysiwyg', 'view own field_municipal_response_author', 'view own field_municipal_response_date', 'view the administration theme', ));
   
   // Assign user 1 the "administrator" role.
   db_insert('users_roles')

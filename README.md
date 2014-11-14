@@ -14,6 +14,14 @@ There's a [Demo site][demo-site-link].
 Find real world examples and further information about opendoors at
 [zebralog.com/opendoors][product-site-link].
 
+## Features
+
+- open up a discussion on a relevant topic
+- people ask questions publicly, you can respond to them
+- people can comment and rate on each other questions
+- use the straight and easy moderation backend to keep the discussion constructive
+- send a newsletter to everyone who's interested
+- is shipped with a mobile-friendly design (based on zen theme)
 
 ## Legal considerations
 

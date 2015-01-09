@@ -182,9 +182,10 @@ function opendoors_heat_stats_block($metrics) {
   $output = '';
 
   foreach ($metrics as $key => $val) {
-    if (!isset($val['description'])) {
+    if (!isset($val['description']) || !is_array($val)) {
       continue;
     }
+
     $output .= '<div class="statistics-row statisticsRow stats-' . $key . '" title="' . t($val['description'], $val['substitutions']) . '">';
     $output .= '<span class="label">' . t($val['label'], $val['substitutions']) . '</span> ';
     $output .= '<span class="value">' . number_format($val['value'], 0, ',', '.') . '</span> ';

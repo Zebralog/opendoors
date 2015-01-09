@@ -77,9 +77,9 @@ features[variable][] = rate_widgets
 features[views_view][] = proposal_discussion
 
 
-; Information added by drush on 2014-11-06
+; Information added by drush on 2015-01-09
 version = "7.x-1.x-dev"
 core = "7.x"
 project = "opendoors"
-datestamp = "1415291275"
+datestamp = "1420834831"
 

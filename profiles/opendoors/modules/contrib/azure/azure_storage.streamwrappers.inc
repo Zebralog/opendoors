@@ -32,7 +32,7 @@ class DrupalAzureStorageStreamWrapper extends Microsoft_WindowsAzure_Storage_Blo
           $configuration->account,
           $configuration->primary_key,
           false,
-          new Microsoft_WindowsAzure_RetryPolicy_retryN(10, 250)
+          new Microsoft_WindowsAzure_RetryPolicy_RetryN(10, 250)
         );
 
         // Increase the timeout of the HTTP client.
@@ -58,7 +58,7 @@ class DrupalAzureStorageStreamWrapper extends Microsoft_WindowsAzure_Storage_Blo
    *
    * Inject the storage client when needed.
    */
-  public function _getStorageClient($uri) {
+  public function _getStorageClient($uri = '') {
     if (!isset($this->_storageClient)) {
       $scheme = file_uri_scheme($uri);
       return DrupalAzureStorageStreamWrapper::buildStorageClient($scheme);

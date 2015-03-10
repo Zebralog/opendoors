@@ -1,0 +1,21 @@
+diff --git a/modules/overlay/overlay-parent.js b/modules/overlay/overlay-parent.js
+index 7452a51..b334db5 100644
+--- a/modules/overlay/overlay-parent.js
++++ b/modules/overlay/overlay-parent.js
+@@ -76,6 +76,7 @@ Drupal.overlay.open = function (url) {
+   if (this.isOpen || this.isOpening) {
+     return this.load(url);
+   }
++  $(document).trigger('drupalOverlayBeforeOpen');
+   this.isOpening = true;
+   // Store the original document title.
+   this.originalTitle = document.title;
+@@ -204,6 +205,8 @@ Drupal.overlay.close = function () {
+     this.destroy();
+     this.isClosing = false;
+   }
++
++  $(document).trigger('drupalOverlayCloseDone');
+   return true;
+ };
+ 

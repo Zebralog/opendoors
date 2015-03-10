@@ -2,12 +2,14 @@ api = 2
 core = 7.x
 
 ; Core project
-projects[] = drupal
+projects[drupal][patch][] = "_patches/overlay__add_beforeOpen_CloseDone_events.patch"
+projects[drupal][patch][] = "_patches/sqlsrv--install-to-includes-database.patch"
 
 ; Modules
 projects[admin_menu][subdir] = "contrib"
 projects[azure][subdir] = "contrib"
 projects[azure][version] = "1.x-dev"
+projects[azure][patch][] = "https://www.drupal.org/files/issues/1864686_crash_on_linux.patch"
 projects[auto_entitylabel][subdir] = "contrib"
 projects[backup_migrate][subdir] = "contrib"
 projects[backup_migrate_files][subdir] = "contrib"
@@ -15,6 +17,8 @@ projects[better_exposed_filters][subdir] = "contrib"
 projects[ctools][subdir] = "contrib"
 projects[ckeditor_link][subdir] = "contrib"
 projects[computed_field][subdir] = "contrib"
+projects[computed_field_tools][subdir] = "contrib"
+projects[computed_field_tools][patch][] = "https://www.drupal.org/files/issues/duplicate-entry-for-key-primary-1494178-15.patch"
 projects[cool_message][subdir] = "contrib"
 projects[date][subdir] = "contrib"
 projects[devel][subdir] = "contrib"

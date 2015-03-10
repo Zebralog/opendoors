@@ -1,0 +1,53 @@
+diff --git a/wysiwyg_ckeditor_demo.features.filter.inc b/wysiwyg_ckeditor_demo.features.filter.inc
+index bbc3535..a2cd9c4 100644
+--- a/wysiwyg_ckeditor_demo.features.filter.inc
++++ b/wysiwyg_ckeditor_demo.features.filter.inc
+@@ -22,9 +22,9 @@ function wysiwyg_ckeditor_demo_filter_default_formats() {
+         'weight' => 0,
+         'status' => 1,
+         'settings' => array(
+-          'valid_elements' => 'a[!href|target<_blank|title],
+-div[align<center?justify?left?right],
+-p[align<center?justify?left?right],
++          'valid_elements' => 'a[!href|target<_blank|title],
++div[align<center?justify?left?right],
++p[align<center?justify?left?right],
+ br,span,em,strong,cite,code,blockquote,ul,ol,li,dl,dt,dd,img[*]',
+           'allow_comments' => 0,
+           'nofollow_policy' => 'disabled',
+@@ -147,6 +147,11 @@ br,span,em,strong,cite,code,blockquote,ul,ol,li,dl,dt,dd,img[*]',
+           'rule_style_urls' => array(),
+         ),
+       ),
++      'media_filter' => array(
++        'weight' => -42,
++        'status' => 1,
++        'settings' => array(),
++      ),
+       'pathologic' => array(
+         'weight' => 50,
+         'status' => 1,
+diff --git a/wysiwyg_ckeditor_demo.features.wysiwyg.inc b/wysiwyg_ckeditor_demo.features.wysiwyg.inc
+index a77a0ca..1a123a0 100644
+--- a/wysiwyg_ckeditor_demo.features.wysiwyg.inc
++++ b/wysiwyg_ckeditor_demo.features.wysiwyg.inc
+@@ -36,6 +36,7 @@ function wysiwyg_ckeditor_demo_wysiwyg_default_profiles() {
+           'Link' => 1,
+         ),
+         'drupal' => array(
++          'media' => 1,
+           'convert_linebreaks' => 1,
+         ),
+       ),
+diff --git a/wysiwyg_ckeditor_demo.info b/wysiwyg_ckeditor_demo.info
+index 4c3ec28..79a43a8 100644
+--- a/wysiwyg_ckeditor_demo.info
++++ b/wysiwyg_ckeditor_demo.info
+@@ -3,6 +3,7 @@ core = 7.x
+ package = Features
+ dependencies[] = ckeditor_link
+ dependencies[] = features
++dependencies[] = media
+ dependencies[] = pathologic
+ dependencies[] = wysiwyg
+ dependencies[] = wysiwyg (>7.x-2.2)

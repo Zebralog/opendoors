@@ -1,9 +1,11 @@
+; Build a complete drupal site. This build file will included by build-opendoors.make.
+;
+; It can also be used to build a complete opendoors *site*. Use
+; build-opendoors.make if you want to build an *installation profile*. Usually
+; that is what you want to do.
+
 api = 2
 core = 7.x
-
-; Core project
-projects[drupal][patch][] = "_patches/overlay__add_beforeOpen_CloseDone_events.patch"
-projects[drupal][patch][] = "_patches/sqlsrv--install-to-includes-database.patch"
 
 ; Modules
 projects[admin_menu][subdir] = "contrib"

@@ -484,60 +484,73 @@ function _opendoors_cleanup_features() {
  * @return array
  */
 function _opendoors_azure_config_form() {
-  if (!module_exists('azure_storage')) {
-    return array();
-  }
   $form = array();
   
-  $form['use_azure_storage'] = array(
-    '#type' => 'checkbox',
-    '#title' => st('Use azure storage'),
-    '#description' => st('If you\'re running this platform as an azure cloud service we recommend to store user generated files in an azure storage blob.'),
-  );
-  
-  $form['azure_storage'] = array(
-    '#type' => 'fieldset',
-    '#title' => st('Connect your azure storage account'),
-    '#weight' => 5,
-    '#states' => array(
-      'visible' => array(
-        ':input[name="use_azure_storage"]' => array('checked' => TRUE),
+  if (module_exists('azure_storage')) {
+    $form['use_azure_storage'] = array(
+      '#type' => 'checkbox',
+      '#title' => st('Use azure storage'),
+      '#description' => st('If you\'re running this platform as an azure cloud service we recommend to store user generated files in an azure storage blob.'),
+    );
+
+    $form['azure_storage'] = array(
+      '#type' => 'fieldset',
+      '#title' => st('Connect your azure storage account'),
+      '#weight' => 5,
+      '#states' => array(
+        'visible' => array(
+          ':input[name="use_azure_storage"]' => array('checked' => TRUE),
+        ),
+        'invisible' => array(
+          ':input[name="use_azure_storage"]' => array('checked' => FALSE),
+        ),
       ),
-      'invisible' => array(
-        ':input[name="use_azure_storage"]' => array('checked' => FALSE),
-      ),
-    ),
-  );
-  $form['azure_storage']['#states']['required'] = $form['azure_storage']['#states']['visible'];
+    );
+    $form['azure_storage']['#states']['required'] = $form['azure_storage']['#states']['visible'];
+
+    // TODO: Make fields required only when visible
+    // see https://api.drupal.org/comment/54298#comment-54298
+    $form['azure_storage']['account'] = array(
+      '#type' => 'textfield',
+      '#title' => st('Storage Account Name'),
+      '#description' => st('The name of your Windows Azure Storage account.'),
+    );
+    $form['azure_storage']['blob_container'] = array(
+      '#type' => 'textfield',
+      '#title' => st('Blob container'),
+      '#description' => st('The storage container you will use for storing files from this drupal system.'),
+    );
+    $form['azure_storage']['primary_key'] = array(
+      '#type' => 'textfield',
+      '#title' => st('Primary access key'),
+      '#description' => st('The primary access key attached to this Windows Azure Storage account.'),
+    );
+
+    // Validation handler
+    $form['#validate'] = array('_opendoors_form_azure_config_validate');
+
+    // Submit button
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => st('Proceed'),
+      '#weight' => 100,
+      '#submit' => array('_opendoors_form_azure_config_submit'),
+    );
+  }
+  else {
+    $form['skip-message'] = array(
+      '#markup' => st('There\'s nothing to be done here. You can skip this step.')
+    );
+
+    // Skip button
+    $form['skip'] = array(
+      '#type' => 'submit',
+      '#value' => st('Skip'),
+      '#weight' => 100,
+    );
+  }
   
-  // TODO: Make fields required only when visible
-  // see https://api.drupal.org/comment/54298#comment-54298
-  $form['azure_storage']['account'] = array(
-    '#type' => 'textfield',
-    '#title' => st('Storage Account Name'),
-    '#description' => st('The name of your Windows Azure Storage account.'),
-  );
-  $form['azure_storage']['blob_container'] = array(
-    '#type' => 'textfield',
-    '#title' => st('Blob container'),
-    '#description' => st('The storage container you will use for storing files from this drupal system.'),
-  );
-  $form['azure_storage']['primary_key'] = array(
-    '#type' => 'textfield',
-    '#title' => st('Primary access key'),
-    '#description' => st('The primary access key attached to this Windows Azure Storage account.'),
-  );
-  
-  // Submit button
-  $form['submit'] = array(
-    '#type' => 'submit', 
-    '#value' => st('Proceed'),
-    '#weight' => 100,
-    '#submit' => array('_opendoors_form_azure_config_submit'),
-  );
-  
-  // Validation handler
-  $form['#validate'] = array('_opendoors_form_azure_config_validate');
+
   
   return $form;
 }

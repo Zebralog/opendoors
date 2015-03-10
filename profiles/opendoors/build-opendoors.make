@@ -1,10 +1,14 @@
+; Build an installation profile
+;
+; This build file will be used to build an installation profile for Opendoors.
+;   drush make --no-patch-txt --prepare-install build-opendoors.make build
+
 api = 2
 core = 7.x
 
 projects[drupal][type] = core
-; projects[drupal][version] = 7.31
-; projects[drupal][download][type] = get
-; projects[drupal][download][url] = http://ftp.drupal.org/files/projects/drupal-7.31.tar.gz
+projects[drupal][patch][] = "_patches/overlay__add_beforeOpen_CloseDone_events.patch"
+projects[drupal][patch][] = "_patches/sqlsrv--install-to-includes-database.patch"
 
 ; Opendoors Profile
 projects[opendoors][type] = profile

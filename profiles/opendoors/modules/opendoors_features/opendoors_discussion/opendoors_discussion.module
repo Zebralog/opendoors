@@ -83,6 +83,12 @@ function opendoors_discussion_form_alter(&$form, &$form_state, $form_id) {
     
     // Announce translatable string (later used in JS)
     t('Please select your category');
+
+    // TODO: This is a quick and dirty workaround which translates field descriptions.
+    //
+    // Ideally i18n_field would translate a field and its (translatable) attributes. But it somehow does not work here.
+    $form['field_category'][LANGUAGE_NONE]['#description'] = t($form['field_category'][LANGUAGE_NONE]['#description']);
+
   }
   else if ($form_id == 'comment_node_proposal_form') {
     if ($user->uid == 0) {

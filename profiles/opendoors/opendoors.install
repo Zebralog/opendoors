@@ -228,7 +228,15 @@ function opendoors_install() {
   variable_set('configurable_timezones', 0);
   // First day of the week
   variable_set('date_first_day', 1);
-  
+
+  // Date formats specifically for germany
+  $language = variable_get('language_default', null);
+  if ($language && $language->language == 'de') {
+    variable_set('date_format_long', 'l, F j, Y - H:i');
+    variable_set('date_format_medium', 'j. F Y - G:i');
+    variable_set('date_format_short', 'd.m.Y - H:i');
+  }
+
   // Set default front page
   variable_set('site_frontpage', 'browse-proposals');
   

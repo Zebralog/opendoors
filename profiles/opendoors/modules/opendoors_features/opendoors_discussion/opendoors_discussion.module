@@ -79,6 +79,10 @@ function opendoors_discussion_form_alter(&$form, &$form_state, $form_id) {
     // Redirect to front page after form submission
     if (drupal_is_front_page() || arg(0) == 'browse-proposals') {
       $form['actions']['submit']['#submit'][] = '_opendoors_discussion_redirect_to_discussion';
+
+      field_group_hide_field_groups($form, array('group_municipal_response'));
+      field_group_hide_field_groups($form, array('group_moderation'));
+      $form['field_recommended']['#access'] = FALSE;
     }
     
     // Announce translatable string (later used in JS)

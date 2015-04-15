@@ -89,6 +89,12 @@ function opendoors_discussion_form_alter(&$form, &$form_state, $form_id) {
     // Ideally i18n_field would translate a field and its (translatable) attributes. But it somehow does not work here.
     $form['field_category'][LANGUAGE_NONE]['#description'] = t($form['field_category'][LANGUAGE_NONE]['#description']);
 
+    // Fix error when uploading image on frontpage.
+    // See http://drupal.stackexchange.com/questions/35165/file-upload-broken-on-node-form-on-custom-page
+    // and https://www.drupal.org/node/1118114#comment-4575298
+    $files = (isset($form_state['build_info']['files'])) ? $form_state['build_info']['files'] : array();
+    $files[] = drupal_get_path('module', 'node') . '/node.pages.inc';
+    $form_state['build_info']['files'] = $files;
   }
   else if ($form_id == 'comment_node_proposal_form') {
     if ($user->uid == 0) {

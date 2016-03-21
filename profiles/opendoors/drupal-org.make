@@ -7,6 +7,14 @@
 api = 2
 core = 7.x
 
+
+;; Uncomment if you want to test `drush make` locally
+;; Example: `drush make --prepare-install drupal-org.make build`
+; projects[drupal][type] = core
+; projects[drupal][patch][] = "_patches/overlay__add_beforeOpen_CloseDone_events.patch"
+; projects[drupal][patch][] = "_patches/sqlsrv--install-to-includes-database.patch"
+
+
 ; Modules
 projects[admin_menu][subdir] = "contrib"
 projects[azure][subdir] = "contrib"
@@ -20,7 +28,6 @@ projects[ctools][subdir] = "contrib"
 projects[ckeditor_link][subdir] = "contrib"
 projects[computed_field][subdir] = "contrib"
 projects[computed_field_tools][subdir] = "contrib"
-projects[computed_field_tools][patch][] = "https://www.drupal.org/files/issues/duplicate-entry-for-key-primary-1494178-15.patch"
 projects[cool_message][subdir] = "contrib"
 projects[date][subdir] = "contrib"
 projects[devel][subdir] = "contrib"
@@ -37,6 +44,7 @@ projects[l10n_client][subdir] = "contrib"
 projects[libraries][subdir] = "contrib"
 projects[maxlength][subdir] = "contrib"
 projects[media][subdir] = "contrib"
+projects[media][version] = "1.5"
 projects[module_filter][subdir] = "contrib"
 projects[mollom][subdir] = "contrib"
 projects[overlay_paths][subdir] = "contrib"

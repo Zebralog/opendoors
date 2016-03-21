@@ -16,8 +16,8 @@ class MollomDrupal extends Mollom {
    * @see Mollom::__construct().
    */
   public function __construct() {
-    parent::__construct();
     // Set any configured endpoint that may be different from the default.
+    parent::__construct();
     $configured_server = $this->loadConfiguration('server');
     if (!empty($configured_server)) {
       $this->server = $configured_server;
@@ -161,36 +161,6 @@ class MollomDrupal extends Mollom {
       'body' => $dhr->data,
     );
     return $response;
-  }
-
-  /**
-   * Ping the Mollom API.
-   *
-   * Drupal may want to ping with a set of keys that
-   * are not yet saved in the configuration.  This function handles setting and
-   * resetting the private key after pinging in order to maintain this state.
-   *
-   * @param $publicKey
-   *   (Optional) the public key to use.  If not provided, the class's own
-   *   publicKey is used.
-   * @param $privateKey
-   *   (Optional) the private key to use.  If not provided, the class's own
-   *   privateKey is used.
-   * @param string $callback
-   *   A callback path to receive the "pong" response from Mollom.  The path
-   *   defaults to 'mollom/pong'.
-   */
-  public function pingAPI($publicKey = NULL, $privateKey = NULL, $callback = 'mollom/pong') {
-    // Handle setting the private key for authorization purposes.
-    $currentPrivateKey = $this->loadConfiguration('privateKey');
-    if (!empty($privateKey)) {
-      $this->privateKey = $privateKey;
-    }
-    // Update the callback to an absolute URL.
-    $callback = url($callback, array('absolute' => TRUE));
-    $result = $this->ping($callback, $publicKey);
-    $this->saveConfiguration('privateKey', $currentPrivateKey);
-    return $result;
   }
 
   /**
@@ -381,6 +351,9 @@ class MollomDrupalTestLocal extends MollomDrupalTest {
     list(, $server) = explode('://', $GLOBALS['base_url'], 2);
     $this->server = $server . '/mollom-test/rest';
 
+    // Do not destroy production server variables when testing mode is enabled.
+    $this->configuration_map['server'] = 'mollom_test_local_api_endpoint';
+
     parent::__construct();
   }
 
@@ -455,11 +428,11 @@ class MollomDrupalTestInvalid extends MollomDrupalTest {
    * Overrides MollomDrupalTest::__construct().
    */
   function __construct() {
+    parent::__construct();
     $this->originalServer = $this->server;
     $this->configuration_map['server'] = 'mollom_test_invalid_api_endpoint';
-    parent::__construct();
-
     $this->saveConfiguration('server', 'fake-host');
+    $this->server = 'fake-host';
   }
 
   /**

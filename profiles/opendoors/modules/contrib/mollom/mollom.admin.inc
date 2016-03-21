@@ -452,39 +452,6 @@ function mollom_admin_configure_form($form, &$form_state, $mollom_form = NULL) {
         ),
       );
 
-      // CMP integration requires Clean URLs to be enabled, in order for the
-      // local moderation callback endpoints to work.
-      $has_clean_urls = variable_get('clean_url', FALSE);
-
-      $form['mollom']['moderation'] = array(
-        '#type' => 'checkbox',
-        '#title' => t('Allow content to be moderated from the <a href="@moderation-url">@moderation-product</a>', array(
-          '@moderation-url' => 'https://mollom.com/moderation',
-          '@moderation-product' => 'Mollom Content Moderation Platform',
-        )),
-        '#default_value' => (string) (int) ($mollom_form['moderation'] && $has_clean_urls),
-        '#disabled' => !$has_clean_urls,
-        // Only possible for forms which result in a locally stored entity.
-        '#access' => !empty($mollom_form['entity']),
-        // Only possible for forms protected via text analysis.
-        '#states' => array(
-          'visible' => array(
-            ':input[name="mollom[mode]"]' => array('value' => (string) MOLLOM_MODE_ANALYSIS),
-          ),
-        ),
-        '#description' => t('Provides a unified moderation interface supporting multiple sites, moderation teams, and detailed analytics.'),
-      );
-      if (!$has_clean_urls) {
-        $form['mollom']['moderation']['#description'] .= '<br />' . t('Requires <a href="@clean-urls">Clean URLs</a> to be enabled.', array(
-          '@clean-urls' => url('admin/config/search/clean-urls'),
-        ));
-      }
-      else {
-        $form['mollom']['moderation']['#description'] .= '<br />' . t('Note: All content that was created while this option was disabled cannot be moderated from the @moderation-product; only new content will appear.', array(
-          '@moderation-product' => 'Mollom Content Moderation Platform',
-        ));
-      }
-
       $form['actions']['submit'] = array(
         '#type' => 'submit',
         '#value' => t('Save'),
@@ -861,8 +828,8 @@ function mollom_admin_settings($form, &$form_state) {
     '#type' => 'fieldset',
     '#title' => t('Mollom API keys'),
     '#description' => t('To obtain API keys, <a href="@signup-url">sign up</a> or log in to your <a href="@site-manager-url">Site manager</a>, register this site, and copy the keys into the fields below.', array(
-      '@signup-url' => 'https://mollom.com/pricing',
-      '@site-manager-url' => 'https://mollom.com/site-manager',
+      '@signup-url' => 'https://www.mollom.com/pricing',
+      '@site-manager-url' => 'https://www.mollom.com/site-manager',
     )),
     '#collapsible' => TRUE,
     // Only show key configuration fields if they are not configured or invalid.
@@ -884,46 +851,6 @@ function mollom_admin_settings($form, &$form_state) {
     '#element_validate' => array('mollom_admin_settings_validate_key'),
     '#description' => t('Used for authentication. Similar to a password, the private key should not be shared with anyone.'),
   );
-  $form['access-keys']['ping_holder'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Test connection'),
-    '#title_display' => 'invisible',
-    '#states' => array(
-      'visible' => array(
-        ':input[name="mollom_public_key"]' => array('!value' => ''),
-        ':input[name="mollom_private_key"]' => array('!value' => ''),
-      ),
-    ),
-    'ping_action' => array(
-      '#type' => 'button',
-      '#value' => t('Ping Mollom'),
-      '#submit' => array('mollom_admin_ping_submit'),
-      '#ajax' => array(
-        'callback' => 'mollom_admin_ping_ajax_callback',
-        'wrapper' => 'mollom-ping-response',
-        'method' => 'replace',
-        'effect' => 'fade',
-      ),
-    ),
-    'help' => array(
-      '#type' => 'container',
-      '#attributes' => array(
-        'class' => array('description'),
-      ),
-      'helptext' => array(
-        '#markup' => t('Be sure that you have checked "Log all Mollom messages" in the "Advanced" configuration in order to review full API responses.'),
-      ),
-    ),
-    'mollom_ping_replace' => array(
-      '#type' => 'container',
-      '#attributes' => array(
-        'id' => 'mollom-ping-response',
-      ),
-      'response' => array(
-        '#markup' => isset($form_state['storage']['mollom_ping']) ? $form_state['storage']['mollom_ping'] : '',
-      ),
-    )
-  );
   $form['mollom_fallback'] = array(
     '#type' => 'radios',
     '#title' => t('When the Mollom service is unavailable'),
@@ -933,7 +860,7 @@ function mollom_admin_settings($form, &$form_state) {
       MOLLOM_FALLBACK_BLOCK => t('Block all form submissions'),
     ),
     '#description' => t('Mollom offers a <a href="@pricing-url">high-availability</a> infrastructure for users on paid plans to reduce potential downtime.', array(
-      '@pricing-url' => 'https://mollom.com/pricing',
+      '@pricing-url' => 'https://www.mollom.com/pricing',
     )),
   );
 
@@ -1012,7 +939,7 @@ function mollom_admin_settings($form, &$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Enable audio CAPTCHAs.'),
     '#description' => t('Allows users to switch to an audio verification using the <a href="!faq-url">NATO alphabet</a>.  This may not be appropriate for non-English language sites.', array(
-      '!faq-url' => 'https://mollom.com/faq/mollom-audible-captcha-language',
+      '!faq-url' => 'https://www.mollom.com/faq/mollom-audible-captcha-language',
     )),
     '#default_value' => variable_get('mollom_audio_captcha_enabled', 1),
   );
@@ -1029,7 +956,7 @@ function mollom_admin_settings($form, &$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Enable form behavior analysis (beta).'),
     '#description' => t('This will place a small tracking image from Mollom on each form protected by textural analysis to help Mollom determine if the form is filled out by a bot.  <a href="!fba-url">Learn more</a>.', array(
-      '!fba-url' => 'https://mollom.com/faq/form-behavior-analysis',
+      '!fba-url' => 'https://www.mollom.com/faq/form-behavior-analysis',
     )),
     '#default_value' => variable_get('mollom_fba_enabled', 0),
   );
@@ -1048,7 +975,7 @@ function mollom_admin_settings($form, &$form_state) {
     '#type' => 'checkboxes',
     '#title' => t('Allow users to  "Flag as Inappropriate" for the following:'),
     '#description' => t('"Flag as inappropriate" will only appear on protected forms for users who have permission to the content type and have the permission to "Report to Mollom".  <a href="!fai-url">Learn more</a>.', array(
-      '!fai-url' => 'https://mollom.com/faq/flag-as-inappropriate',
+      '!fai-url' => 'https://www.mollom.com/faq/flag-as-inappropriate',
     )),
     '#options' => drupal_map_assoc($options),
     '#default_value' => variable_get('mollom_fai_entity_types', array('comment' => 'comment')),
@@ -1122,55 +1049,11 @@ function mollom_admin_settings_submit($form, &$form_state) {
 }
 
 /**
- * Form submit handler for the ping button.
- */
-function mollom_admin_ping_ajax_callback($form, &$form_state) {
-  $mollom = mollom();
-  $response = $mollom->pingAPI($form_state['values']['mollom_public_key'], $form_state['values']['mollom_private_key']);
-  $code = isset($response['code']) ? $response['code'] : $response;
-  if (drupal_strlen($code)) {
-    $log_message = t('Mollom API response status: @response.  Please check your <a href="!log_url">Recent log messages</a> for details.', array(
-      '@response' => $code,
-      '!log_url' => url('admin/reports/dblog'),
-    ));
-  }
-  else {
-    $log_message = t('Ping request succeeded.  Please check your <a href="!log_url">Recent log messages</a> for pong callback.', array(
-      '!log_url' => url('admin/reports/dblog'),
-    ));
-  }
-  $form_state['storage']['mollom_ping'] = $form['access-keys']['ping_holder']['mollom_ping_replace']['response']['#markup'] = $log_message;
-  return $form['access-keys']['ping_holder']['mollom_ping_replace'];
-}
-
-/**
- * Callback for Mollom API pong return.
- *
- * NOTE:  This function does not have any access restrictions due to the nature
- * of an API callback.  Therefore, no additional work should be performed here.
- */
-function mollom_admin_pong_callback() {
-  if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    mollom_log(array(
-      'message' => 'Mollom API pong called using invalid request method',
-    ), WATCHDOG_ERROR);
-    return MENU_NOT_FOUND;
-  }
-  mollom_log(array(
-    'message' => 'Mollom API: pong',
-  ), WATCHDOG_INFO);
-  // Return empty content so that Mollom receives an appropriate HTTP status
-  // code.
-  return array();
-}
-
-
-/**
  * Menu callback; Displays the administrative reports page.
  */
 function mollom_reports_page($form, &$form_state) {
   $embed_attributes = array(
-    'src' => 'https://mollom.com/statistics.swf?key=' . check_plain(variable_get('mollom_public_key', '')),
+    'src' => 'https://www.mollom.com/statistics.swf?key=' . check_plain(variable_get('mollom_public_key', '')),
     'quality' => 'high',
     'width' => '100%',
     'height' => '430',

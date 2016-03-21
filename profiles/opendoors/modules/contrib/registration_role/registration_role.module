@@ -8,7 +8,7 @@
  *
  * Designate a role to assign to all new user accounts
  * that are created through the registration form.
- * 
+ *
  * Based on a code snippet by Pauly Jura:
  * http://drupal.org/node/28379#comment-132430
  */
@@ -52,7 +52,7 @@ function registration_role_menu() {
  */
 function registration_role_admin_settings() {
   $roles = user_roles(TRUE);
-  unset($roles['2']);
+  unset($roles[DRUPAL_AUTHENTICATED_RID]);
   $form['registration_role_roles'] = array(
     '#type' => 'radios',
     '#title' => t('Role to automatically assign to new registrants'),

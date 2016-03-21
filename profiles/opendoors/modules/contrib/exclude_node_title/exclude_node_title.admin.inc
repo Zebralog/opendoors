@@ -31,8 +31,8 @@ function exclude_node_title_admin_settings() {
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
   );
-  $node_types = _node_types_build()->names;
-  foreach ($node_types as $node_type => $node_type_label) {
+
+  foreach (node_type_get_names() as $node_type => $node_type_label) {
     drupal_add_js(array('exclude_node_title' => array('content_types' => array($node_type => $node_type_label))), 'setting');
 
     $form['exclude_node_title_content_type']['exclude_node_title_content_type_value_' . $node_type] = array(

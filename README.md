@@ -23,6 +23,10 @@ Find real world examples and further information about opendoors at
 - send a newsletter to everyone who's interested
 - is shipped with a mobile-friendly design (based on zen theme)
 
+## Requirements
+
+Additional to [Drupal 7 requirements](https://www.drupal.org/requirements), please make sure you're using PHP 5.5. Prior PHP versions are not supported.
+
 ## Legal considerations
 
 When using opendoors, please do state that your product is based on opendoors

@@ -88,10 +88,7 @@ dependencies[] = views_ui
 ; dependencies[] = backup_migrate_files
 ; dependencies[] = stage_file_proxy
 
-
-; Information added by drush on 2016-03-21
+; Information added by drush on 2016-08-12
 version = "7.x-1.x-dev"
-core = "7.x"
 project = "opendoors"
-datestamp = "1458553319"
-
+datestamp = "1471009125"

@@ -43,10 +43,7 @@ features[variable][] = node_submitted_pane_embedded
 features[views_view][] = show_content_by_id
 features_exclude[dependencies][opendoors_discussion] = opendoors_discussion
 
-
-; Information added by drush on 2015-04-15
+; Information added by drush on 2016-08-12
 version = "7.x-1.x-dev"
-core = "7.x"
 project = "opendoors"
-datestamp = "1429114992"
-
+datestamp = "1471009125"

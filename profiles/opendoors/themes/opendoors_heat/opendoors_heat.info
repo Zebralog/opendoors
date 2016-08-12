@@ -186,10 +186,7 @@ settings[heatmap_color_3] = "#480f6d"
 settings[heatmap_color_4] = "#990062"
 settings[heatmap_color_5] = "#ad003a"
 
-
-; Information added by drush on 2015-04-15
+; Information added by drush on 2016-08-12
 version = "7.x-1.x-dev"
-core = "7.x"
 project = "opendoors"
-datestamp = "1429114992"
-
+datestamp = "1471009125"

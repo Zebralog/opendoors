@@ -70,6 +70,7 @@ projects[wysiwyg][version] = "2.x-dev"
 projects[wysiwyg_filter][subdir] = "contrib"
 projects[wysiwyg_linebreaks][subdir] = "contrib"
 projects[zen][subdir] = "contrib"
+projects[zen][version] = "5"
 
 ; TODO enable in profile
 ; projects[metatag][subdir] = ""
@@ -84,7 +85,7 @@ projects[zen][subdir] = "contrib"
 ; Libraries
 libraries[autopager][type] = "libraries"
 libraries[autopager][download][type] = "file"
-libraries[autopager][download][url] = "http://jquery-autopager.googlecode.com/files/jquery.autopager-1.0.0.js"
+libraries[autopager][download][url] = "https://jquery-autopager.googlecode.com/files/jquery.autopager-1.0.0.js"
 libraries[ckeditor][type] = "libraries"
 libraries[ckeditor][download][type] = "file"
 libraries[ckeditor][download][url] = "http://download.cksource.com/CKEditor/CKEditor/CKEditor%204.4.4/ckeditor_4.4.4_basic.zip"

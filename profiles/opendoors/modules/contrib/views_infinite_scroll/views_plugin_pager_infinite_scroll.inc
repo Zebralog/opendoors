@@ -68,7 +68,7 @@ class views_plugin_pager_infinite_scroll extends views_plugin_pager_full {
    * {@inheritdoc}
    */
   function summary_title() {
-    return t('Infinite Scroll: @parent', ['@parent' => parent::summary_title()]);
+    return t('Infinite Scroll: @parent', array('@parent' => parent::summary_title()));
   }
 
   /**
